@@ -2,74 +2,43 @@
   {
     "slide": 1,
     "type": "cover",
-    "headline": "당신 옆자리,<br>AI로 <span class='bar-highlight'>대체됐습니다</span>",
-    "subtext": "살아남는 사람들은 이미 이걸 알고 있다"
+    "headline": "한국세븐일레븐,<br><span class='bar-highlight'>성장 여지는 아직 크다</span>",
+    "subtext": "2025~2026 반등 가능성: 구조·전략·실행 5장 분석"
   },
   {
     "slide": 2,
-    "type": "content-bigdata",
-    "headline": "AI 시장, <span class='accent'>폭발적 성장</span>",
-    "bigdata_number": "4,340",
-    "bigdata_unit": "억 달러",
-    "body": "2026년 글로벌 AI 시장 규모\n2030년에는 1.81조 달러까지 성장 전망",
-    "subtext": "출처: Fortune Business Insights / Mordor Intelligence"
+    "type": "content-split",
+    "headline": "현재 위치: <span class='accent'>규모는 충분, 수익성은 과제</span>",
+    "left_title": "기회 요인",
+    "left_body": "전국 점포망(1만+),\n편의점 고빈도 구매 채널,\n롯데 계열 밸류체인 연계 가능",
+    "right_title": "압박 요인",
+    "right_body": "상위 2강 대비 브랜드 파워 열세,\n저효율 점포 부담,\n프로모션 의존 매출 구조"
   },
   {
     "slide": 3,
-    "type": "content-stat",
-    "headline": "<span class='accent'>40%</span> — AI 에이전트 탑재율",
-    "emphasis": "5% → 40%",
-    "body": "2025년 5%에 불과하던 AI 에이전트 탑재율\n2026년 말 40%로 급등 전망 (Gartner)"
+    "type": "content-list",
+    "headline": "성장 가능성이 높은 이유 4가지",
+    "item1": "PB·즉석식 비중 확대 시 점포당 마진 개선 폭이 큼",
+    "item2": "상권별 MD 재편으로 동일 점포에서도 매출 탄력 확보 가능",
+    "item3": "멤버십/앱 데이터 고도화로 재방문·교차구매 상승 여지",
+    "item4": "배달·퀵커머스 결합 시 심야·비피크 시간 매출 보강 가능",
+    "item5": "핵심은 출점보다 기존 점포 생산성 전환"
   },
   {
     "slide": 4,
-    "type": "content-grid",
-    "headline": "2026년 <span class='accent'>4대 AI 메가트렌드</span>",
-    "grid1_icon": "robot",
-    "grid1_title": "에이전틱 AI",
-    "grid1_desc": "스스로 계획·실행하는 자율 협업자",
-    "grid2_icon": "chip",
-    "grid2_title": "엣지 AI / SLM",
-    "grid2_desc": "기기 내 실행, 비용 98% 절감",
-    "grid3_icon": "eye",
-    "grid3_title": "멀티모달 AI",
-    "grid3_desc": "텍스트·이미지·음성 동시 처리 기본화",
-    "grid4_icon": "globe",
-    "grid4_title": "오픈소스 AI",
-    "grid4_desc": "DeepSeek 충격, 기술 민주화 가속"
+    "type": "content-steps",
+    "headline": "반등 시나리오: 90일 실행 로드맵",
+    "step1": "1) 점포 포트폴리오 정리: 저효율 상권 재배치·축소",
+    "step2": "2) 수익 구조 전환: PB/푸드/헬스 카테고리 집중",
+    "step3": "3) 운영 체질 개선: 발주·인력·프로모션 자동 최적화"
   },
   {
     "slide": 5,
-    "type": "content-split",
-    "headline": "AI — <span class='accent'>위기인가, 기회인가</span>",
-    "left_title": "위기",
-    "left_body": "최대 3억 개 일자리 영향\n32% 기업 인력 감축 계획",
-    "right_title": "기회",
-    "right_body": "GDP +16% 성장 기여\n13조 달러 경제 가치 창출",
-    "subtext": "Goldman Sachs / McKinsey Global Institute"
-  },
-  {
-    "slide": 6,
-    "type": "content-highlight",
-    "headline": "AI 도입의 <span class='accent'>진짜 장벽</span>",
-    "emphasis": "기술이 아니라 실행력",
-    "body": "도입 기업 71% 중\n전사 확산은 36%에 불과",
-    "subtext": "기술은 준비됐다, 조직이 문제다"
-  },
-  {
-    "slide": 7,
-    "type": "content-fullimage",
-    "headline": "AI 협업 시대의 생존법",
-    "badge_text": "핵심 인사이트",
-    "body": "파일럿은 끝났다\n이제 성과를 증명할 때",
-    "badge2_text": "2026년 목표",
-    "body2": "실험 → 확산 → 성과\n이 순서가 전부다",
-    "image_url": "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=1080&q=80"
-  },
-  {
-    "slide": 8,
     "type": "cta",
-    "headline": "매주 10분으로\nAI 경쟁력 완성",
-    "cta_text": "지금 팔로우하기"
+    "headline": "세븐일레븐의 미래는\n점포 수가 아니라 점포당 이익",
+    "cta_text": "이번 분기 목표: 매출보다 \"점포당 수익\"을 먼저 올려라",
+    "tag1": "#세븐일레븐",
+    "tag2": "#편의점전략",
+    "tag3": "#수익성전환"
   }
 ]
