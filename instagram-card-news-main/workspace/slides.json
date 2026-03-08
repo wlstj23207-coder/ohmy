@@ -2,43 +2,51 @@
   {
     "slide": 1,
     "type": "cover",
-    "headline": "한국세븐일레븐,<br><span class='bar-highlight'>성장 여지는 아직 크다</span>",
-    "subtext": "2025~2026 반등 가능성: 구조·전략·실행 5장 분석"
+    "headline": "2026 유통업,\n<span class='highlight'>게임의 룰</span>이\n달라진다",
+    "subtext": "0.6% 성장률 시대\n당장 알아야 할 변화 시그널"
   },
   {
     "slide": 2,
-    "type": "content-split",
-    "headline": "현재 위치: <span class='accent'>규모는 충분, 수익성은 과제</span>",
-    "left_title": "기회 요인",
-    "left_body": "전국 점포망(1만+),\n편의점 고빈도 구매 채널,\n롯데 계열 밸류체인 연계 가능",
-    "right_title": "압박 요인",
-    "right_body": "상위 2강 대비 브랜드 파워 열세,\n저효율 점포 부담,\n프로모션 의존 매출 구조"
+    "type": "content-stat",
+    "headline": "최근 5년 중\n<span class='highlight'>최저 성장률</span>",
+    "emphasis": "0.6%",
+    "body": "2026 소매유통시장 예상 성장률\n지금 장 보는 그 마트,\n내년에도 있을까?"
   },
   {
     "slide": 3,
-    "type": "content-list",
-    "headline": "성장 가능성이 높은 이유 4가지",
-    "item1": "PB·즉석식 비중 확대 시 점포당 마진 개선 폭이 큼",
-    "item2": "상권별 MD 재편으로 동일 점포에서도 매출 탄력 확보 가능",
-    "item3": "멤버십/앱 데이터 고도화로 재방문·교차구매 상승 여지",
-    "item4": "배달·퀵커머스 결합 시 심야·비피크 시간 매출 보강 가능",
-    "item5": "핵심은 출점보다 기존 점포 생산성 전환"
+    "type": "content-grid",
+    "headline": "<span class='highlight'>업태별</span> 희비 교차",
+    "grid1_icon": "📱",
+    "grid1_title": "온라인",
+    "grid1_desc": "+3.2%\n배송 경쟁 가속",
+    "grid2_icon": "🏬",
+    "grid2_title": "백화점",
+    "grid2_desc": "+0.7%\n선택적 소비",
+    "grid3_icon": "🏪",
+    "grid3_title": "편의점",
+    "grid3_desc": "+0.1%\n내실 경쟁",
+    "grid4_icon": "🛒",
+    "grid4_title": "대형마트",
+    "grid4_desc": "-0.9%\n구조적 역성장"
   },
   {
     "slide": 4,
-    "type": "content-steps",
-    "headline": "반등 시나리오: 90일 실행 로드맵",
-    "step1": "1) 점포 포트폴리오 정리: 저효율 상권 재배치·축소",
-    "step2": "2) 수익 구조 전환: PB/푸드/헬스 카테고리 집중",
-    "step3": "3) 운영 체질 개선: 발주·인력·프로모션 자동 최적화"
+    "type": "content-list",
+    "headline": "당장 알아야 할\n<span class='highlight'>생존 키워드</span> 5",
+    "item1": "제로클릭 — AI가 먼저 추천한다",
+    "item2": "필코노미 — 감정이 지갑을 연다",
+    "item3": "프라이스 디코딩 — 가격을 해독하는 소비자",
+    "item4": "퀵커머스 — 30분 배송 전쟁",
+    "item5": "리테일 미디어 — 유통이 곧 광고"
   },
   {
     "slide": 5,
     "type": "cta",
-    "headline": "세븐일레븐의 미래는\n점포 수가 아니라 점포당 이익",
-    "cta_text": "이번 분기 목표: 매출보다 \"점포당 수익\"을 먼저 올려라",
-    "tag1": "#세븐일레븐",
-    "tag2": "#편의점전략",
-    "tag3": "#수익성전환"
+    "headline": "이 변화를\n모르면 뒤처집니다",
+    "cta_text": "저장하고 공유하기",
+    "subtext": "앞서가는 유통 인사이트\n저장 & 팔로우",
+    "tag1": "#유통업트렌드",
+    "tag2": "#2026전망",
+    "tag3": "#리테일혁신"
   }
 ]
