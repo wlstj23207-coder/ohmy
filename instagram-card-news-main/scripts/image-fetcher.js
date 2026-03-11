@@ -3,10 +3,17 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const PixabayProvider = require('./image-provider-pixabay');
+const WikimediaProvider = require('./image-provider-wikimedia');
+const {
+  classifyTopic,
+  routeProviders,
+  getAvailableProviders,
+} = require('./image-topic-router');
 
 /**
  * Image Fetcher Service
- * Handles image fetching from multiple APIs with caching and relevance scoring
+ * Handles image fetching from multiple APIs with caching, relevance scoring, and intelligent routing
  */
 class ImageFetcher {
   constructor(options = {}) {
@@ -28,6 +35,11 @@ class ImageFetcher {
     // Initialize APIs
     this.pexelsApiKey = process.env.PEXELS_API_KEY || options.pexelsApiKey;
     this.unsplashApiKey = process.env.UNSPLASH_API_KEY || options.unsplashApiKey;
+    this.pixabayApiKey = process.env.PIXABAY_API_KEY || options.pixabayApiKey;
+
+    // Initialize provider instances
+    this.pixabayProvider = new PixabayProvider({ apiKey: this.pixabayApiKey });
+    this.wikimediaProvider = new WikimediaProvider();
   }
 
   /**
@@ -43,9 +55,18 @@ class ImageFetcher {
       source = ['pexels', 'unsplash'], // Multiple sources
       minScore = 70,
       refresh = false,
+      useRouting = true, // Enable intelligent routing
     } = options;
 
     console.log(`🔍 Fetching images for topic: "${topic}"`);
+
+    // Analyze topic if routing is enabled
+    let routingInfo = null;
+    if (useRouting) {
+      routingInfo = this.analyzeTopic(topic);
+      console.log(`📊 Topic classified as: ${routingInfo.classification.label} (${routingInfo.classification.type})`);
+      console.log(`🎯 Provider priority: ${routingInfo.provider_priorities.join(' → ')}`);
+    }
 
     // Check cache first
     if (!refresh && imageUsage === 'topic-matched') {
@@ -56,22 +77,74 @@ class ImageFetcher {
       }
     }
 
-    // Fetch images from multiple sources
+    // Fetch images using routing or direct source selection
     let allImages = [];
+    let sourcesUsed = [];
 
-    if (Array.isArray(source)) {
-      for (const src of source) {
+    if (useRouting && routingInfo) {
+      // Use intelligent routing
+      const priorities = routingInfo.provider_priorities;
+      const providers = getAvailableProviders();
+
+      console.log(`🎯 Using routing: ${priorities.join(' → ')}`);
+
+      for (const providerName of priorities) {
+        if (allImages.length >= maxImages * 2) break; // Enough images, stop
+
+        const providerInfo = providers[providerName];
+        if (!providerInfo) continue;
+
+        // Check if provider is available (has API key or is keyless)
+        if (providerInfo.requires_api_key) {
+          const apiKey = this[`_${providerName}ApiKey`];
+          if (!apiKey) {
+            console.log(`  ⚠️ Skipping ${providerName} (API key not configured)`);
+            continue;
+          }
+        }
+
         try {
-          console.log(`  Fetching from ${src}...`);
-          const images = await this.fetchFromSource(src, topic, maxImages * 2);
-          allImages = allImages.concat(images);
+          console.log(`  📥 Fetching from ${providerName}...`);
+          let images;
+
+          if (providerName === 'pixabay') {
+            images = await this.pixabayProvider.fetchImages(topic, maxImages * 2);
+          } else if (providerName === 'wikimedia') {
+            images = await this.wikimediaProvider.fetchImages(topic, maxImages * 2);
+          } else if (providerName === 'pexels') {
+            images = await this.fetchFromPexels(topic, maxImages * 2);
+          } else if (providerName === 'unsplash') {
+            images = await this.fetchFromUnsplash(topic, maxImages * 2);
+          }
+
+          if (images && images.length > 0) {
+            console.log(`  ✓ Got ${images.length} images from ${providerName}`);
+            allImages = allImages.concat(images);
+            sourcesUsed.push(providerName);
+          }
         } catch (error) {
-          console.warn(`  Warning: ${src} fetch failed: ${error.message}`);
+          console.warn(`  ⚠️ ${providerName} fetch failed: ${error.message}`);
+          // Continue to next provider
         }
       }
     } else {
-      allImages = await this.fetchFromSource(source, topic, maxImages * 2);
+      // Use direct source selection (original behavior)
+      if (Array.isArray(source)) {
+        for (const src of source) {
+          try {
+            console.log(`  Fetching from ${src}...`);
+            const images = await this.fetchFromSource(src, topic, maxImages * 2);
+            allImages = allImages.concat(images);
+          } catch (error) {
+            console.warn(`  Warning: ${src} fetch failed: ${error.message}`);
+          }
+        }
+      } else {
+        allImages = await this.fetchFromSource(source, topic, maxImages * 2);
+      }
     }
+
+    console.log(`  📊 Total images collected: ${allImages.length}`);
 
     // Score and filter images
     const scoredImages = this.scoreImages(allImages, topic);
@@ -92,18 +165,39 @@ class ImageFetcher {
       this.cacheImages(topic, selectedImages);
     }
 
+    // Log routing summary if available
+    if (routingInfo) {
+      console.log(`🤖 Routing summary: ${sourcesUsed.length} sources tried, ${sourcesUsed.join(', ')}`);
+    }
+
     return selectedImages;
   }
 
   /**
+   * Analyze topic for routing recommendations
+   * @param {string} topic - The topic to analyze
+   * @returns {object} Routing analysis
+   */
+  analyzeTopic(topic) {
+    return {
+      classification: classifyTopic(topic),
+      provider_priorities: routeProviders(classifyTopic(topic).type),
+    };
+  }
+
+  /**
    * Fetch images from a specific source
-   * @param {string} source - Source name (pexels, unsplash)
+   * @param {string} source - Source name (pexels, unsplash, pixabay, wikimedia)
    * @param {string} topic - Search topic
    * @param {number} limit - Maximum number of results
    * @returns {Promise<Array>} Array of raw image objects
    */
   async fetchFromSource(source, topic, limit) {
     switch (source) {
+      case 'pixabay':
+        return await this.pixabayProvider.fetchImages(topic, limit);
+      case 'wikimedia':
+        return await this.wikimediaProvider.fetchImages(topic, limit);
       case 'pexels':
         return await this.fetchFromPexels(topic, limit);
       case 'unsplash':
@@ -220,6 +314,42 @@ class ImageFetcher {
   }
 
   /**
+   * Test all configured providers
+   * @returns {Promise<object>} Test results for each provider
+   */
+  async testProviders() {
+    const providers = getAvailableProviders();
+    const results = {};
+
+    for (const [name, info] of Object.entries(providers)) {
+      try {
+        if (name === 'pixabay') {
+          results[name] = await this.pixabayProvider.test();
+        } else if (name === 'wikimedia') {
+          results[name] = await this.wikimediaProvider.test();
+        } else if (name === 'pexels') {
+          results[name] = !!(this.pexelsApiKey && await this.fetchFromPexels('test', 1).catch(() => false));
+        } else if (name === 'unsplash') {
+          results[name] = !!(this.unsplashApiKey && await this.fetchFromUnsplash('test', 1).catch(() => false));
+        }
+
+        results[name].available = !!results[name];
+        results[name].name = info.name;
+        results[name].requires_key = info.requires_api_key;
+      } catch (error) {
+        results[name] = {
+          available: false,
+          error: error.message,
+          name: info.name,
+          requires_key: info.requires_api_key,
+        };
+      }
+    }
+
+    return results;
+  }
+
+  /**
    * Score images based on relevance and quality
    * @param {Array} images - Raw image objects
    * @param {string} topic - Search topic
@@ -276,9 +406,9 @@ class ImageFetcher {
    * @returns {number} Score between 0-1
    */
   calculateSemanticScore(image, keywords) {
-    if (!image.alt || keywords.length === 0) return 0.5;
+    if (!image.alt && !image.title && !image.description) return 0.5;
 
-    const alt = image.alt.toLowerCase();
+    const alt = (image.alt || image.title || image.description || '').toLowerCase();
     let matchCount = 0;
 
     for (const keyword of keywords) {
@@ -330,7 +460,7 @@ class ImageFetcher {
     let score = 0.5;
 
     // Higher score for trusted sources
-    const trustedSources = ['unsplash', 'pexels', 'getty', 'shutterstock'];
+    const trustedSources = ['unsplash', 'pexels', 'wikimedia', 'pixabay'];
     if (trustedSources.some(src => image.source?.includes(src))) {
       score += 0.3;
     }
@@ -440,7 +570,9 @@ class ImageFetcher {
       apiKeysConfigured: {
         pexels: !!this.pexelsApiKey,
         unsplash: !!this.unsplashApiKey,
+        pixabay: !!this.pixabayApiKey,
       },
+      providers: getAvailableProviders(),
     };
   }
 }
