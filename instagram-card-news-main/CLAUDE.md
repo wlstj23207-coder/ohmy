@@ -37,7 +37,7 @@ Claude Code가 오케스트레이터 역할을 하며, 리서치 → **리서치
 | `template` | `minimal` | 템플릿 스타일 |
 | `slide_count` | `7` | 슬라이드 수 (최소 5, 최대 12) |
 | `accent_color` | `#2D63E2` | 악센트 색상 (hex) |
-| `account_name` | `my_account` | 계정명 (@ 없이 입력, 템플릿에서 자동 추가) |
+| `account_name` | `jinseo` | 계정명 (@ 없이 입력, 템플릿에서 자동 추가, 고정 출력) |
 
 명시되지 않은 파라미터는 `config.json`의 기본값을 사용합니다.
 
@@ -179,10 +179,17 @@ Claude Code가 오케스트레이터 역할을 하며, 리서치 → **리서치
 ```bash
 node scripts/render.js \
   --slides workspace/slides.json \
-  --style {template} \
+  --style magazine \
   --output output/ \
+  --topic "{topic}" \
+  --discussion-file workspace/discussion.md \
+  --auto-images \
+  --unsplash-only \
+  --force-images \
+  --min-image-score 60 \
+  --max-images-per-query 8 \
   --accent "{accent_color}" \
-  --account "{account_name}"
+  --account "jinseo"
 ```
 
 렌더링 완료 후 `output/` 디렉토리에 `slide-01.png` ~ `slide-0N.png` 파일이 생성됩니다.
@@ -306,15 +313,15 @@ node scripts/render.js \
 {
   "version": "3.0",
   "defaults": {
-    "template": "minimal",
-    "accent_color": "#2D63E2",
-    "account_name": "my_account",
+    "template": "magazine",
+    "accent_color": "#3B82F6",
+    "account_name": "jinseo",
     "slide_count": 7
   }
 }
 ```
 
-- `template`: 기본 템플릿 스타일 (`minimal` / `bold` / `elegant` / `premium` / `toss` / `magazine` / `clean` / `blueprint`)
+- `template`: 기본 템플릿 스타일 (`magazine` / `minimal` / `bold` / `elegant` / `premium` / `toss` / `clean` / `blueprint`)
 - `accent_color`: 기본 악센트 색상 (hex 코드)
 - `account_name`: Instagram 계정명 (슬라이드에 표시)
 - `slide_count`: 기본 슬라이드 수
@@ -333,7 +340,7 @@ node scripts/render.js \
 "ChatGPT 활용법" 카드뉴스, 엘레건트, 10장, 악센트 #FF6B6B
 ```
 ```
-미니멀 스타일로 투자 기초 지식 카드뉴스, @finance_tips 계정
+매거진 스타일로 투자 기초 지식 카드뉴스
 ```
 ```
 "건강한 식습관 7가지" 카드뉴스, 캐주얼 톤, 볼드 스타일
@@ -367,3 +374,16 @@ instagram-card-news/
 ```
 
 `workspace/` 디렉토리는 매 생성 시 덮어쓰기됩니다. 이전 결과물은 `output/`에 보관됩니다.
+### Step 4.1: 카드뉴스 기본 추가 명령어 (항상 적용)
+
+아래 문구를 모든 카드뉴스 요청에 자동으로 추가해 실행합니다.
+
+`매거진 스타일로 만든 후, Unsplash에서 주제와 관련 있는 사진을 배경에 넣어서 카드뉴스 만들어.`
+
+운영 규칙:
+- 스타일은 기본 `magazine`
+- 이미지 소스는 기본 `unsplash-only`
+- 슬라이드별 문맥 기반 이미지 자동 주입 강제 (`--auto-images --force-images`)
+- 계정명은 항상 `@jinseo`로 표시
+
+---

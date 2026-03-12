@@ -249,6 +249,9 @@ node scripts/render.js \
 - Unsplash 주제 연관 배경 자동 주입 (`unsplash-only`)
 - 계정명 `@jinseo` 고정
 
+항상 적용되는 추가 명령어:
+- `매거진 스타일로 만든 후, Unsplash에서 주제와 관련 있는 사진을 배경에 넣어서 카드뉴스 만들어.`
+
 ### 슬라이드 문맥 기반 이미지 자동 주입 + 렌더링
 
 `content-image`, `content-fullimage` 슬라이드에 대해 **주제 + 슬라이드 텍스트 문맥**으로 이미지를 자동 선택해 `slides.json`에 반영합니다.

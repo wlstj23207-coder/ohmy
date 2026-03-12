@@ -333,7 +333,7 @@ class ImageFetcher {
     }
 
     return new Promise((resolve, reject) => {
-      const url = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=${limit}&orientation=portrait`;
+      const url = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=${limit}&orientation=portrait&content_filter=high&order_by=relevant`;
 
       https.get(url, {
         headers: {
@@ -469,14 +469,76 @@ class ImageFetcher {
       slide.subtext,
     ].filter(Boolean);
 
-    const cleaned = parts
-      .join(' ')
-      .replace(/\n/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    const metaNoise = new Set([
+      'team', 'discussion', 'round', 'slide', 'slides', 'content',
+      'topic', 'headline', 'body', 'summary', 'insight', 'trend', 'trends',
+    ]);
 
-    // Keep query compact for provider APIs while preserving topic intent.
-    return cleaned.slice(0, 220);
+    const tokens = this.extractKeywords(parts.join(' '))
+      .filter((word) => !metaNoise.has(word))
+      .slice(0, 12);
+
+    // Keep query compact and keyword-focused for provider APIs.
+    return tokens.join(' ').slice(0, 120);
+  }
+
+  /**
+   * Build Unsplash-friendly queries by mixing Korean topic terms with English visual hints.
+   * @param {string} topic
+   * @param {object} slide
+   * @param {string} discussionSnippet
+   * @returns {Array<string>}
+   */
+  buildUnsplashQueries(topic, slide, discussionSnippet = '') {
+    const base = this.buildSlideQuery(topic, slide, discussionSnippet);
+    const fallback = [topic, slide.headline].filter(Boolean).join(' ').trim();
+
+    const signal = `${topic || ''} ${slide.headline || ''} ${slide.body || ''} ${slide.emphasis || ''}`.toLowerCase();
+    const englishHints = [];
+    const categoryHints = [];
+    const visualBriefByType = {
+      cover: 'hero shot editorial magazine background negative space',
+      content: 'editorial product shot natural light shallow depth of field',
+      'content-badge': 'product closeup convenience store shelf portrait framing',
+      'content-stat': 'nutrition label product closeup clean commercial photography',
+      'content-image': 'lifestyle shot person holding product in store aisle',
+      'content-fullimage': 'cinematic lifestyle photo dramatic composition',
+      cta: 'checkout counter shopping basket product arrangement',
+    };
+    const visualBrief = visualBriefByType[slide.type] || 'editorial commercial photo';
+
+    if (signal.includes('편의점')) englishHints.push('convenience store', 'korea');
+    if (signal.includes('디저트')) englishHints.push('dessert', 'sweet snack');
+    if (signal.includes('딸기')) englishHints.push('strawberry');
+    if (signal.includes('감귤')) englishHints.push('citrus');
+    if (signal.includes('말차')) englishHints.push('matcha');
+    if (signal.includes('저당')) englishHints.push('low sugar');
+    if (signal.includes('고단백')) englishHints.push('high protein');
+    if (signal.includes('콜라보')) englishHints.push('collaboration packaging');
+    if (signal.includes('패키지')) englishHints.push('product packaging');
+    if (signal.includes('디저트') || signal.includes('dessert')) {
+      categoryHints.push('dessert', 'bakery', 'pastry', 'sweet food');
+    }
+    if (signal.includes('편의점') || signal.includes('convenience')) {
+      categoryHints.push('convenience store snack', 'retail shelf');
+    }
+
+    if (!englishHints.length) {
+      englishHints.push('editorial photo', 'magazine style');
+    }
+
+    const englishQuery = [...new Set([...englishHints, ...categoryHints])].join(' ');
+    const compactTopic = this.extractKeywords(topic || '').slice(0, 5).join(' ');
+    const compactSlide = this.extractKeywords(`${slide.headline || ''} ${slide.body || ''}`).slice(0, 5).join(' ');
+    const sceneQuery = `${englishQuery} ${visualBrief}`.trim();
+
+    return [...new Set([
+      `${sceneQuery} ${compactTopic}`.trim(),
+      `${sceneQuery} ${compactSlide}`.trim(),
+      base,
+      fallback,
+      topic,
+    ].filter(Boolean))];
   }
 
   /**
@@ -500,6 +562,16 @@ class ImageFetcher {
       enhance: 'true',
     });
     return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?${params.toString()}`;
+  }
+
+  /**
+   * Normalize URL to asset identity (strip query/hash).
+   * @param {string} url
+   * @returns {string}
+   */
+  getAssetKey(url) {
+    if (!url || typeof url !== 'string') return '';
+    return url.split('?')[0].split('#')[0];
   }
 
   /**
@@ -533,7 +605,11 @@ class ImageFetcher {
    */
   extractDiscussionKeywords(discussionContext, limit = 10) {
     if (!discussionContext || typeof discussionContext !== 'string') return [];
-    const keywords = this.extractKeywords(discussionContext);
+    const cleanedDiscussion = discussionContext
+      .replace(/^#{1,6}\s+/gm, ' ')
+      .replace(/^\s*[-*]\s+/gm, ' ')
+      .replace(/\b(round|team|discussion)\b/gi, ' ');
+    const keywords = this.extractKeywords(cleanedDiscussion);
     return keywords.slice(0, limit);
   }
 
@@ -585,6 +661,7 @@ class ImageFetcher {
       minScore = 60,
       maxImagesPerQuery = 8,
       usedUrls = new Set(),
+      usedAssetKeys = new Set(),
       usedSources = new Map(),
       discussionContext = '',
       allowSourceFallback = true,
@@ -596,7 +673,9 @@ class ImageFetcher {
     const discussionSnippet = discussionKeywords.join(' ');
     const slideQuery = this.buildSlideQuery(topic, slide, discussionSnippet);
     const fallbackQuery = [topic, slide.headline].filter(Boolean).join(' ').trim();
-    const queries = [...new Set([slideQuery, fallbackQuery, topic, discussionSnippet].filter(Boolean))];
+    const queries = unsplashOnly
+      ? this.buildUnsplashQueries(topic, slide, discussionSnippet)
+      : [...new Set([slideQuery, fallbackQuery, topic].filter(Boolean))];
 
     // Explicit Unsplash-only mode for consistent photo style across all slides.
     if (unsplashOnly) {
@@ -604,7 +683,12 @@ class ImageFetcher {
         try {
           const images = await this.fetchFromUnsplash(query, Math.max(5, maxImagesPerQuery));
           if (images && images.length > 0) {
-            const pick = images.find((img) => img.url && !usedUrls.has(img.url)) || images[0];
+            const pick = images.find((img) => {
+              if (!img.url || usedUrls.has(img.url)) return false;
+              const assetKey = this.getAssetKey(img.url);
+              if (!assetKey) return false;
+              return !usedAssetKeys.has(assetKey);
+            });
             if (pick && pick.url) {
               return { ...pick, final_score: 999 };
             }
@@ -677,18 +761,23 @@ class ImageFetcher {
       const base = typeof image.score === 'number' ? image.score : 0;
       const context = this.calculateSlideContextScore(image, keywords, slide.type);
       const duplicatePenalty = usedUrls.has(image.url) ? 30 : 0;
+      const duplicateAssetPenalty = usedAssetKeys.has(this.getAssetKey(image.url)) ? 26 : 0;
       const sourceName = image.source || 'unknown';
       const usedCount = usedSources.get(sourceName) || 0;
       const sourceDiversityPenalty = Math.min(usedCount * 4, 16);
       const unsplashBonus = (this.unsplashApiKey && sourceName === 'unsplash') ? 18 : 0;
       return {
         ...image,
-        final_score: Math.round((base + context + unsplashBonus - duplicatePenalty - sourceDiversityPenalty) * 100) / 100,
+        final_score: Math.round((base + context + unsplashBonus - duplicatePenalty - duplicateAssetPenalty - sourceDiversityPenalty) * 100) / 100,
       };
     });
 
     ranked.sort((a, b) => b.final_score - a.final_score);
-    return ranked.find((img) => !usedUrls.has(img.url)) || ranked[0] || null;
+    return ranked.find((img) => {
+      if (!img.url || usedUrls.has(img.url)) return false;
+      const assetKey = this.getAssetKey(img.url);
+      return assetKey && !usedAssetKeys.has(assetKey);
+    }) || ranked.find((img) => !usedUrls.has(img.url)) || ranked[0] || null;
   }
 
   /**
@@ -723,6 +812,9 @@ class ImageFetcher {
         .map((slide) => slide.image_url)
         .filter((url) => typeof url === 'string' && url.trim().length > 0)
     );
+    const usedAssetKeys = new Set(
+      [...usedUrls].map((url) => this.getAssetKey(url)).filter(Boolean)
+    );
     const usedSources = new Map();
 
     let attached = 0;
@@ -739,6 +831,7 @@ class ImageFetcher {
         minScore,
         maxImagesPerQuery,
         usedUrls,
+        usedAssetKeys,
         usedSources,
         discussionContext,
         unsplashOnly,
@@ -749,6 +842,8 @@ class ImageFetcher {
       if (selected && selected.url) {
         slide.image_url = selected.url;
         usedUrls.add(selected.url);
+        const assetKey = this.getAssetKey(selected.url);
+        if (assetKey) usedAssetKeys.add(assetKey);
         if (selected.source) {
           usedSources.set(selected.source, (usedSources.get(selected.source) || 0) + 1);
         }
@@ -772,7 +867,14 @@ class ImageFetcher {
    */
   extractKeywords(topic) {
     // Remove common words and extract keywords
-    const stopWords = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'about', 'as', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'between', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 'can', 'will', 'just', 'should', 'now', '의', '는', '이', '가', '을', '를', '와', '과', '하고', '의해', '에서', '에', '대해', '해서', '해서']);
+    const stopWords = new Set([
+      'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'about', 'as', 'into',
+      'through', 'during', 'before', 'after', 'above', 'below', 'between', 'under', 'again', 'further', 'then', 'once',
+      'here', 'there', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some',
+      'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 'can', 'will', 'just', 'should', 'now',
+      '의', '는', '이', '가', '을', '를', '와', '과', '하고', '의해', '에서', '에', '대해', '해서',
+      '트렌드', '주제', '내용', '슬라이드', '카드뉴스', '라운드', '팀', '토론', '신상', '지금', '이번', '먼저',
+    ]);
 
     const words = topic
       .toLowerCase()
