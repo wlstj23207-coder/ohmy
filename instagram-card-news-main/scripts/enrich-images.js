@@ -15,8 +15,15 @@ function inferTopicFromSlides(slides) {
   return firstHeadline ? firstHeadline.headline : '카드뉴스';
 }
 
+function loadDiscussionContext(discussionPath) {
+  if (!discussionPath) return '';
+  if (!fs.existsSync(discussionPath)) return '';
+  return fs.readFileSync(discussionPath, 'utf8');
+}
+
 async function enrichSlidesWithImages(opts = {}) {
   const slidesPath = opts.slidesPath || path.join(process.cwd(), config.workspace_dir, 'slides.json');
+  const discussionPath = opts.discussionPath || path.join(process.cwd(), config.workspace_dir, 'discussion.md');
   const minScore = Number.isFinite(Number(opts.minScore)) ? Number(opts.minScore) : 60;
   const maxImagesPerQuery = Number.isFinite(Number(opts.maxImagesPerQuery)) ? Number(opts.maxImagesPerQuery) : 8;
   const force = !!opts.force;
@@ -29,18 +36,23 @@ async function enrichSlidesWithImages(opts = {}) {
 
   const slides = JSON.parse(fs.readFileSync(slidesPath, 'utf8'));
   const topic = opts.topic || inferTopicFromSlides(slides);
+  const discussionContext = loadDiscussionContext(discussionPath);
   const fetcher = new ImageFetcher({
     maxImages: Math.max(maxImagesPerQuery, 6),
   });
 
   console.log(`🧠 Enriching slides with topic-aware images`);
   console.log(`   topic: "${topic}"`);
+  if (discussionContext) {
+    console.log(`   discussion context loaded: ${discussionPath}`);
+  }
   console.log(`   minScore: ${minScore}, maxImagesPerQuery: ${maxImagesPerQuery}, force: ${force}`);
 
   const result = await fetcher.attachImagesToSlides(slides, topic, {
     force,
     minScore,
     maxImagesPerQuery,
+    discussionContext,
     refresh,
   });
 
@@ -64,6 +76,9 @@ function parseArgs(argv) {
         break;
       case '--topic':
         opts.topic = args[++i];
+        break;
+      case '--discussion-file':
+        opts.discussionPath = args[++i];
         break;
       case '--min-score':
         opts.minScore = Number(args[++i]);

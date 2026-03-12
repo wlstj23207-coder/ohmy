@@ -123,12 +123,13 @@ Step 5  시각 검토 — 가독성, 텍스트 잘림, 흐름, CTA 명확성 확
 
 ## 🖼️ 이미지 풀러 기능 (강화됨)
 
-이미지 풀러는 **Pixabay**와 **Wikimedia Commons**를 추가하여 지능형 주제 기반 라우팅을 지원합니다.
+이미지 풀러는 **Openverse + Pixabay + Wikimedia Commons**를 포함해 지능형 주제 기반 라우팅을 지원합니다.
 
 ### 이미지 소스
 
 | 소스 | API 키 필요 | 특징 |
 |---|---|---|
+| **Openverse** | ❌ 필요 없음 (키리스) | 오픈 라이선스 이미지 + 메타데이터 풍부 |
 | **Pexels** | ✅ 필요 | 고화질 무료 사진 및 비디오 |
 | **Pixabay** | ✅ 필요 | 무료 사진, 일러스트, 벡터 |
 | **Unsplash** | ✅ 필요 | 고품질 크리에이티브 사진 |
@@ -150,14 +151,14 @@ Step 5  시각 검토 — 가독성, 텍스트 잘림, 흐름, CTA 명확성 확
 
 ```
 abstract_explainer (이론/개념 설명)
-  → Pexels → Pixabay → Unsplash → Wikimedia Commons
+  → Openverse → Pexels → Pixabay → Unsplash → Wikimedia Commons
 
 factual_entity (사물/명사 지식)
-  → Wikimedia Commons → Pexels → Pixabay → Unsplash
-  (Wikimedia는 키리스이므로 사실적 주제에 우선순위)
+  → Wikimedia Commons → Openverse → Pexels → Pixabay → Unsplash
+  (Wikimedia/Openverse 키리스 우선)
 
 current_news (실시간 뉴스)
-  → Wikimedia Commons → Pixabay → Pexels → Unsplash
+  → Wikimedia Commons → Openverse → Pixabay → Pexels → Unsplash
 ```
 
 ### 라우팅 동작
@@ -252,6 +253,7 @@ node scripts/render.js \
   --style clean \
   --output output/ \
   --topic "AI 트렌드 2025" \
+  --discussion-file workspace/discussion.md \
   --auto-images \
   --min-image-score 60 \
   --max-images-per-query 8
@@ -263,6 +265,7 @@ node scripts/render.js \
 npm run enrich-images -- \
   --slides workspace/slides.json \
   --topic "AI 트렌드 2025" \
+  --discussion-file workspace/discussion.md \
   --min-score 60
 ```
 

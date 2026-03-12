@@ -158,6 +158,7 @@ const TOPIC_CRITERIA = {
  */
 const PROVIDER_PRIORITIES = {
   [TOPIC_TYPES.ABSTRACT_EXPLAINER]: [
+    'openverse',
     'pexels',
     'pixabay',
     'unsplash',
@@ -165,12 +166,14 @@ const PROVIDER_PRIORITIES = {
   ],
   [TOPIC_TYPES.FACTUAL_ENTITY]: [
     'wikimedia',  // Wikimedia is keyless, prioritize for factual topics
+    'openverse',
     'pexels',
     'pixabay',
     'unsplash',
   ],
   [TOPIC_TYPES.CURRENT_NEWS]: [
     'wikimedia',  // Good for current events coverage
+    'openverse',
     'pixabay',
     'pexels',
     'unsplash',
@@ -276,6 +279,7 @@ function routeProviders(topicType) {
   if (!priorities) {
     console.warn(`Unknown topic type: ${topicType}, using default priorities`);
     return [
+      'openverse',
       'pexels',
       'pixabay',
       'unsplash',
@@ -297,6 +301,12 @@ function getAvailableProviders() {
       requires_api_key: true,
       description: 'Free stock photos and videos',
       keyless: false,
+    },
+    openverse: {
+      name: 'Openverse',
+      requires_api_key: false,
+      description: 'Openly licensed images with rich attribution metadata',
+      keyless: true,
     },
     pixabay: {
       name: 'Pixabay',

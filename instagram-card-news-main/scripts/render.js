@@ -105,6 +105,7 @@ async function render(opts = {}) {
     await enrichSlidesWithImages({
       slidesPath,
       topic: opts.topic,
+      discussionPath: opts.discussionPath,
       force: opts.forceImages,
       minScore: opts.minImageScore,
       maxImagesPerQuery: opts.maxImagesPerQuery,
@@ -206,6 +207,9 @@ function parseArgs(argv) {
         break;
       case '--topic':
         opts.topic = args[++i];
+        break;
+      case '--discussion-file':
+        opts.discussionPath = args[++i];
         break;
       case '--force-images':
         opts.forceImages = true;

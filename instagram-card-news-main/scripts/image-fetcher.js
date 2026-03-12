@@ -5,6 +5,7 @@ const path = require('path');
 const https = require('https');
 const PixabayProvider = require('./image-provider-pixabay');
 const WikimediaProvider = require('./image-provider-wikimedia');
+const OpenverseProvider = require('./image-provider-openverse');
 const {
   classifyTopic,
   routeProviders,
@@ -40,6 +41,7 @@ class ImageFetcher {
     // Initialize provider instances
     this.pixabayProvider = new PixabayProvider({ apiKey: this.pixabayApiKey });
     this.wikimediaProvider = new WikimediaProvider();
+    this.openverseProvider = new OpenverseProvider();
   }
 
   /**
@@ -125,6 +127,8 @@ class ImageFetcher {
             images = await this.pixabayProvider.fetchImages(topic, maxImages * 2);
           } else if (providerName === 'wikimedia') {
             images = await this.wikimediaProvider.fetchImages(topic, maxImages * 2);
+          } else if (providerName === 'openverse') {
+            images = await this.openverseProvider.fetchImages(topic, maxImages * 2);
           } else if (providerName === 'pexels') {
             images = await this.fetchFromPexels(topic, maxImages * 2);
           } else if (providerName === 'unsplash') {
@@ -212,6 +216,8 @@ class ImageFetcher {
         return await this.pixabayProvider.fetchImages(topic, limit);
       case 'wikimedia':
         return await this.wikimediaProvider.fetchImages(topic, limit);
+      case 'openverse':
+        return await this.openverseProvider.fetchImages(topic, limit);
       case 'pexels':
         return await this.fetchFromPexels(topic, limit);
       case 'unsplash':
@@ -341,6 +347,8 @@ class ImageFetcher {
           results[name] = await this.pixabayProvider.test();
         } else if (name === 'wikimedia') {
           results[name] = await this.wikimediaProvider.test();
+        } else if (name === 'openverse') {
+          results[name] = await this.openverseProvider.test();
         } else if (name === 'pexels') {
           results[name] = !!(this.pexelsApiKey && await this.fetchFromPexels('test', 1).catch(() => false));
         } else if (name === 'unsplash') {
@@ -401,9 +409,10 @@ class ImageFetcher {
    * @param {object} slide
    * @returns {string}
    */
-  buildSlideQuery(topic, slide) {
+  buildSlideQuery(topic, slide, discussionContext = '') {
     const parts = [
       topic,
+      discussionContext,
       slide.headline,
       slide.emphasis,
       slide.badge_text,
@@ -422,7 +431,7 @@ class ImageFetcher {
       .trim();
 
     // Keep query compact for provider APIs while preserving topic intent.
-    return cleaned.slice(0, 160);
+    return cleaned.slice(0, 220);
   }
 
   /**
@@ -446,6 +455,18 @@ class ImageFetcher {
     ].filter(Boolean).join(' ');
 
     return this.extractKeywords(raw);
+  }
+
+  /**
+   * Extract concise keyword signal from discussion text.
+   * @param {string} discussionContext
+   * @param {number} limit
+   * @returns {Array<string>}
+   */
+  extractDiscussionKeywords(discussionContext, limit = 10) {
+    if (!discussionContext || typeof discussionContext !== 'string') return [];
+    const keywords = this.extractKeywords(discussionContext);
+    return keywords.slice(0, limit);
   }
 
   /**
@@ -496,12 +517,16 @@ class ImageFetcher {
       minScore = 60,
       maxImagesPerQuery = 8,
       usedUrls = new Set(),
+      usedSources = new Map(),
+      discussionContext = '',
       refresh = false,
     } = options;
 
-    const slideQuery = this.buildSlideQuery(topic, slide);
+    const discussionKeywords = this.extractDiscussionKeywords(discussionContext);
+    const discussionSnippet = discussionKeywords.join(' ');
+    const slideQuery = this.buildSlideQuery(topic, slide, discussionSnippet);
     const fallbackQuery = [topic, slide.headline].filter(Boolean).join(' ').trim();
-    const queries = [...new Set([slideQuery, fallbackQuery, topic].filter(Boolean))];
+    const queries = [...new Set([slideQuery, fallbackQuery, topic, discussionSnippet].filter(Boolean))];
 
     let candidates = [];
     for (const query of queries) {
@@ -536,9 +561,12 @@ class ImageFetcher {
       const base = typeof image.score === 'number' ? image.score : 0;
       const context = this.calculateSlideContextScore(image, keywords, slide.type);
       const duplicatePenalty = usedUrls.has(image.url) ? 30 : 0;
+      const sourceName = image.source || 'unknown';
+      const usedCount = usedSources.get(sourceName) || 0;
+      const sourceDiversityPenalty = Math.min(usedCount * 4, 16);
       return {
         ...image,
-        final_score: Math.round((base + context - duplicatePenalty) * 100) / 100,
+        final_score: Math.round((base + context - duplicatePenalty - sourceDiversityPenalty) * 100) / 100,
       };
     });
 
@@ -558,6 +586,7 @@ class ImageFetcher {
       force = false,
       minScore = 60,
       maxImagesPerQuery = 8,
+      discussionContext = '',
       refresh = false,
     } = options;
 
@@ -567,6 +596,7 @@ class ImageFetcher {
         .map((slide) => slide.image_url)
         .filter((url) => typeof url === 'string' && url.trim().length > 0)
     );
+    const usedSources = new Map();
 
     let attached = 0;
     let skipped = 0;
@@ -582,12 +612,17 @@ class ImageFetcher {
         minScore,
         maxImagesPerQuery,
         usedUrls,
+        usedSources,
+        discussionContext,
         refresh,
       });
 
       if (selected && selected.url) {
         slide.image_url = selected.url;
         usedUrls.add(selected.url);
+        if (selected.source) {
+          usedSources.set(selected.source, (usedSources.get(selected.source) || 0) + 1);
+        }
         attached += 1;
       }
     }
