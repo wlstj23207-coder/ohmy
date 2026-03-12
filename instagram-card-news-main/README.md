@@ -246,11 +246,11 @@ node scripts/render.js \
 
 기본 정책(항상 적용):
 - `magazine` 스타일
-- Unsplash 주제 연관 배경 자동 주입 (`unsplash-only`)
+- Pinterest 주제 연관 배경 자동 주입 (`pinterest-only`)
 - 계정명 `@jinseo` 고정
 
 항상 적용되는 추가 명령어:
-- `매거진 스타일로 만든 후, Unsplash에서 주제와 관련 있는 사진을 배경에 넣어서 카드뉴스 만들어.`
+- `매거진 스타일로 만든 후, Pinterest에서 주제와 관련 있는 사진을 배경에 넣어서 카드뉴스 만들어.`
 
 ### 슬라이드 문맥 기반 이미지 자동 주입 + 렌더링
 
@@ -264,7 +264,7 @@ node scripts/render.js \
   --topic "AI 트렌드 2025" \
   --discussion-file workspace/discussion.md \
   --auto-images \
-  --unsplash-only \
+  --pinterest-only \
   --min-image-score 60 \
   --max-images-per-query 8
 ```
@@ -276,7 +276,7 @@ npm run enrich-images -- \
   --slides workspace/slides.json \
   --topic "AI 트렌드 2025" \
   --discussion-file workspace/discussion.md \
-  --unsplash-only \
+  --pinterest-only \
   --min-score 60
 ```
 

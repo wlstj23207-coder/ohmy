@@ -184,7 +184,7 @@ node scripts/render.js \
   --topic "{topic}" \
   --discussion-file workspace/discussion.md \
   --auto-images \
-  --unsplash-only \
+  --pinterest-only \
   --force-images \
   --min-image-score 60 \
   --max-images-per-query 8 \
@@ -378,11 +378,11 @@ instagram-card-news/
 
 아래 문구를 모든 카드뉴스 요청에 자동으로 추가해 실행합니다.
 
-`매거진 스타일로 만든 후, Unsplash에서 주제와 관련 있는 사진을 배경에 넣어서 카드뉴스 만들어.`
+`매거진 스타일로 만든 후, Pinterest에서 주제와 관련 있는 사진을 배경에 넣어서 카드뉴스 만들어.`
 
 운영 규칙:
 - 스타일은 기본 `magazine`
-- 이미지 소스는 기본 `unsplash-only`
+- 이미지 소스는 기본 `pinterest-only`
 - 슬라이드별 문맥 기반 이미지 자동 주입 강제 (`--auto-images --force-images`)
 - 계정명은 항상 `@jinseo`로 표시
 

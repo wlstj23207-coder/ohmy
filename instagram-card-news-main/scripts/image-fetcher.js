@@ -7,6 +7,7 @@ const PixabayProvider = require('./image-provider-pixabay');
 const WikimediaProvider = require('./image-provider-wikimedia');
 const OpenverseProvider = require('./image-provider-openverse');
 const PollinationsProvider = require('./image-provider-pollinations');
+const PinterestProvider = require('./image-provider-pinterest');
 const {
   classifyTopic,
   routeProviders,
@@ -45,6 +46,7 @@ class ImageFetcher {
     this.wikimediaProvider = new WikimediaProvider();
     this.openverseProvider = new OpenverseProvider();
     this.pollinationsProvider = new PollinationsProvider();
+    this.pinterestProvider = new PinterestProvider();
   }
 
   /**
@@ -97,7 +99,7 @@ class ImageFetcher {
     const {
       imageUsage = 'topic-matched',
       maxImages = this.maxImages,
-      source = ['pexels', 'unsplash'], // Multiple sources
+      source = ['pinterest', 'pexels', 'unsplash'], // Multiple sources
       minScore = 70,
       refresh = false,
       useRouting = true, // Enable intelligent routing
@@ -133,11 +135,18 @@ class ImageFetcher {
       const providers = getAvailableProviders();
 
       // If Unsplash key is configured, prioritize Unsplash first for richer fashion photos.
+      const pinIdx = priorities.indexOf('pinterest');
+      if (pinIdx > -1) {
+        priorities.splice(pinIdx, 1);
+        priorities.unshift('pinterest');
+      }
+
+      // If Unsplash key is configured, prioritize Unsplash near-front for richer photos.
       if (this.unsplashApiKey) {
         const idx = priorities.indexOf('unsplash');
         if (idx > -1) {
           priorities.splice(idx, 1);
-          priorities.unshift('unsplash');
+          priorities.splice(1, 0, 'unsplash');
         }
       }
 
@@ -170,6 +179,8 @@ class ImageFetcher {
             images = await this.openverseProvider.fetchImages(topic, maxImages * 2);
           } else if (providerName === 'pollinations') {
             images = await this.pollinationsProvider.fetchImages(topic, maxImages);
+          } else if (providerName === 'pinterest') {
+            images = await this.pinterestProvider.fetchImages(topic, maxImages * 2);
           } else if (providerName === 'pexels') {
             images = await this.fetchFromPexels(topic, maxImages * 2);
           } else if (providerName === 'unsplash') {
@@ -261,6 +272,8 @@ class ImageFetcher {
         return await this.openverseProvider.fetchImages(topic, limit);
       case 'pollinations':
         return await this.pollinationsProvider.fetchImages(topic, limit);
+      case 'pinterest':
+        return await this.pinterestProvider.fetchImages(topic, limit);
       case 'pexels':
         return await this.fetchFromPexels(topic, limit);
       case 'unsplash':
@@ -357,7 +370,9 @@ class ImageFetcher {
               photographer: photo.user.name,
               photographer_url: photo.user.links.html,
               location: photo.location?.title,
-              alt: photo.description || query,
+              alt: photo.alt_description || photo.description || query,
+              description: photo.description || photo.alt_description || '',
+              tags: Array.isArray(photo.tags) ? photo.tags.map((t) => t?.title).filter(Boolean) : [],
               width: photo.width,
               height: photo.height,
               id: photo.id,
@@ -394,6 +409,8 @@ class ImageFetcher {
           results[name] = await this.openverseProvider.test();
         } else if (name === 'pollinations') {
           results[name] = await this.pollinationsProvider.test();
+        } else if (name === 'pinterest') {
+          results[name] = !!(await this.pinterestProvider.fetchImages('fashion style', 1).catch(() => false));
         } else if (name === 'pexels') {
           results[name] = !!(this.pexelsApiKey && await this.fetchFromPexels('test', 1).catch(() => false));
         } else if (name === 'unsplash') {
@@ -548,10 +565,10 @@ class ImageFetcher {
    * @returns {string}
    */
   buildFallbackImageUrl(query, salt = 1) {
-    const normalized = (query || 'fashion style')
+    const normalized = (query || 'editorial food product')
       .replace(/\s+/g, ' ')
       .trim();
-    const prompt = `${normalized}, editorial fashion photo, gorpcore look, urban style, portrait composition`;
+    const prompt = `${normalized}, editorial food photography, product closeup, convenience store shelf, portrait composition`;
     const params = new URLSearchParams({
       width: '1080',
       height: '1350',
@@ -572,6 +589,75 @@ class ImageFetcher {
   getAssetKey(url) {
     if (!url || typeof url !== 'string') return '';
     return url.split('?')[0].split('#')[0];
+  }
+
+  /**
+   * Build topic anchor rules for relevance checks.
+   * @param {string} topic
+   * @returns {{mustAny: string[], avoid: string[]}}
+   */
+  buildTopicAnchors(topic = '') {
+    const t = String(topic).toLowerCase();
+    const mustAny = [];
+    const avoid = ['flower', 'blossom', 'nature', 'mountain', 'landscape', 'neon sign', 'wall text'];
+
+    if (t.includes('디저트') || t.includes('dessert')) {
+      mustAny.push('dessert', 'cake', 'bakery', 'pastry', 'sweet', 'cookie', 'donut', 'pudding', 'ice cream');
+    }
+    if (t.includes('편의점') || t.includes('convenience')) {
+      mustAny.push('convenience store', 'store shelf', 'packaging', 'snack', 'retail');
+    }
+    if (t.includes('한국') || t.includes('korea')) {
+      mustAny.push('korean', 'korea', 'seoul');
+    }
+    if (
+      t.includes('패션') || t.includes('룩') || t.includes('스타일')
+      || t.includes('fashion') || t.includes('style') || t.includes('denim')
+    ) {
+      mustAny.push('fashion', 'style', 'outfit', 'street style', 'denim', 'jeans');
+      avoid.push('dessert', 'bakery', 'food');
+    }
+    if (!mustAny.length) {
+      mustAny.push('fashion', 'style', 'outfit', 'product');
+    }
+    return { mustAny, avoid };
+  }
+
+  /**
+   * Score Unsplash image candidate against topic/slide intent.
+   * @param {object} image
+   * @param {Array<string>} keywords
+   * @param {{mustAny: string[], avoid: string[]}} anchors
+   * @param {string} slideType
+   * @returns {number}
+   */
+  scoreUnsplashCandidate(image, keywords, anchors, slideType) {
+    const tags = Array.isArray(image.tags) ? image.tags.join(' ') : '';
+    const haystack = [
+      image.alt,
+      image.title,
+      image.description,
+      image.location,
+      tags,
+    ].filter(Boolean).join(' ').toLowerCase();
+
+    let score = 55;
+    const keywordHits = keywords.filter((k) => haystack.includes(k)).length;
+    if (keywords.length) {
+      score += (keywordHits / keywords.length) * 30;
+    }
+
+    const mustHit = anchors.mustAny.some((k) => haystack.includes(k));
+    score += mustHit ? 12 : 0;
+
+    const avoidHits = anchors.avoid.filter((k) => haystack.includes(k)).length;
+    score -= avoidHits * 20;
+
+    if (slideType === 'content-image' || slideType === 'content-fullimage') {
+      if (haystack.includes('product') || haystack.includes('packaging')) score += 8;
+    }
+
+    return Math.max(0, Math.min(100, Math.round(score)));
   }
 
   /**
@@ -665,6 +751,7 @@ class ImageFetcher {
       usedSources = new Map(),
       discussionContext = '',
       allowSourceFallback = true,
+      pinterestOnly = false,
       unsplashOnly = false,
       refresh = false,
     } = options;
@@ -677,20 +764,56 @@ class ImageFetcher {
       ? this.buildUnsplashQueries(topic, slide, discussionSnippet)
       : [...new Set([slideQuery, fallbackQuery, topic].filter(Boolean))];
 
+    // Explicit Pinterest-only mode.
+    if (pinterestOnly) {
+      const anchors = this.buildTopicAnchors(topic);
+      const slideKeywords = this.extractSlideKeywords(topic, slide);
+      const pool = [];
+
+      for (const query of queries) {
+        try {
+          const images = await this.fetchFromSource('pinterest', query, Math.max(8, maxImagesPerQuery));
+          if (!images || images.length === 0) continue;
+          for (const img of images) {
+            if (!img.url || usedUrls.has(img.url)) continue;
+            const assetKey = this.getAssetKey(img.url);
+            if (!assetKey || usedAssetKeys.has(assetKey)) continue;
+            pool.push({
+              ...img,
+              final_score: this.scoreUnsplashCandidate(img, slideKeywords, anchors, slide.type),
+            });
+          }
+        } catch (_) {
+          // Try next query.
+        }
+      }
+
+      if (pool.length > 0) {
+        pool.sort((a, b) => b.final_score - a.final_score);
+        return pool[0];
+      }
+      return null;
+    }
+
     // Explicit Unsplash-only mode for consistent photo style across all slides.
     if (unsplashOnly) {
+      const anchors = this.buildTopicAnchors(topic);
+      const slideKeywords = this.extractSlideKeywords(topic, slide);
+      const minAcceptedScore = minScore > 1 ? minScore : Math.round(minScore * 100);
+      const pool = [];
+
       for (const query of queries) {
         try {
           const images = await this.fetchFromUnsplash(query, Math.max(5, maxImagesPerQuery));
           if (images && images.length > 0) {
-            const pick = images.find((img) => {
-              if (!img.url || usedUrls.has(img.url)) return false;
+            for (const img of images) {
+              if (!img.url || usedUrls.has(img.url)) continue;
               const assetKey = this.getAssetKey(img.url);
-              if (!assetKey) return false;
-              return !usedAssetKeys.has(assetKey);
-            });
-            if (pick && pick.url) {
-              return { ...pick, final_score: 999 };
+              if (!assetKey || usedAssetKeys.has(assetKey)) continue;
+              pool.push({
+                ...img,
+                final_score: this.scoreUnsplashCandidate(img, slideKeywords, anchors, slide.type),
+              });
             }
           }
         } catch (_) {
@@ -698,18 +821,45 @@ class ImageFetcher {
         }
       }
 
+      if (pool.length > 0) {
+        pool.sort((a, b) => b.final_score - a.final_score);
+        const strong = pool.find((img) => img.final_score >= minAcceptedScore);
+        if (strong) return strong;
+        if (pool[0].final_score >= 45) return pool[0];
+      }
+
       if (allowSourceFallback) {
-        const q = `${topic} ${(slide.headline || '')}`.trim();
-        const safe = encodeURIComponent(`gorpcore fashion outfit street style ${q}`.trim());
-        const url = `https://source.unsplash.com/1080x1350/?${safe}&sig=${usedUrls.size + 1}`;
-        return {
-          url,
-          full_url: url,
-          source: 'unsplash-source-fallback',
-          alt: q,
-          score: 0.58,
-          final_score: 0.58,
-        };
+        const broadQuery = 'korean convenience store dessert product packaging editorial photo';
+        try {
+          const extra = await this.fetchFromUnsplash(broadQuery, Math.max(10, maxImagesPerQuery));
+          if (extra && extra.length > 0) {
+            const rankedExtra = extra
+              .filter((img) => {
+                if (!img.url || usedUrls.has(img.url)) return false;
+                const assetKey = this.getAssetKey(img.url);
+                return !!assetKey && !usedAssetKeys.has(assetKey);
+              })
+              .map((img) => ({
+                ...img,
+                final_score: this.scoreUnsplashCandidate(img, slideKeywords, anchors, slide.type),
+              }))
+              .sort((a, b) => b.final_score - a.final_score);
+            if (rankedExtra.length > 0) return rankedExtra[0];
+          }
+
+          // Last resort (still Unsplash API): allow duplicates rather than leaving slide empty.
+          const relaxed = extra
+            .map((img) => ({
+              ...img,
+              final_score: this.scoreUnsplashCandidate(img, slideKeywords, anchors, slide.type),
+            }))
+            .sort((a, b) => b.final_score - a.final_score);
+          if (relaxed.length > 0) {
+            return relaxed[0];
+          }
+        } catch (_) {
+          // Final fallback disabled to avoid random off-topic images.
+        }
       }
       return null;
     }
@@ -731,10 +881,13 @@ class ImageFetcher {
 
     if (!candidates.length) {
       if (!allowSourceFallback) return null;
-      const fallbackQuery = [topic, slide.headline, slide.body, 'gorpcore fashion streetwear outfit']
+      const fallbackQuery = [topic, slide.headline, slide.body, 'korean convenience store dessert product photo']
         .filter(Boolean)
         .join(' ');
-      const fallbackUrl = this.buildFallbackImageUrl(fallbackQuery, usedUrls.size + 1);
+      const fallbackQuery2 = [fallbackQuery, 'korean convenience store dessert product editorial photo']
+        .filter(Boolean)
+        .join(' ');
+      const fallbackUrl = this.buildFallbackImageUrl(fallbackQuery2, usedUrls.size + 1);
       return {
         url: fallbackUrl,
         full_url: fallbackUrl,
@@ -793,6 +946,7 @@ class ImageFetcher {
       minScore = 60,
       maxImagesPerQuery = 8,
       discussionContext = '',
+      pinterestOnly = false,
       unsplashOnly = false,
       refresh = false,
     } = options;
@@ -811,6 +965,11 @@ class ImageFetcher {
       slides
         .map((slide) => slide.image_url)
         .filter((url) => typeof url === 'string' && url.trim().length > 0)
+        .filter((url) => !url.includes('source.unsplash.com/'))
+        .filter((url) => {
+          if (!pinterestOnly) return true;
+          return url.includes('pinimg.com') || url.includes('pinterest.com');
+        })
     );
     const usedAssetKeys = new Set(
       [...usedUrls].map((url) => this.getAssetKey(url)).filter(Boolean)
@@ -834,6 +993,7 @@ class ImageFetcher {
         usedAssetKeys,
         usedSources,
         discussionContext,
+        pinterestOnly,
         unsplashOnly,
         allowSourceFallback: true,
         refresh,
@@ -848,6 +1008,15 @@ class ImageFetcher {
           usedSources.set(selected.source, (usedSources.get(selected.source) || 0) + 1);
         }
         attached += 1;
+      } else if (force && usedUrls.size > 0) {
+        // Final safety net: reuse a previously-selected relevant image
+        // so every slide keeps a visual background.
+        const fallbackUrl = [...usedUrls][0];
+        slide.image_url = fallbackUrl;
+        attached += 1;
+      } else if (force && typeof slide.image_url === 'string' && slide.image_url.includes('source.unsplash.com/')) {
+        // Remove random source fallback URLs when no relevant image is found.
+        delete slide.image_url;
       }
     }
 
@@ -946,7 +1115,7 @@ class ImageFetcher {
     let score = 0.5;
 
     // Higher score for trusted sources
-    const trustedSources = ['unsplash', 'pexels', 'wikimedia', 'pixabay', 'openverse', 'pollinations-ai'];
+    const trustedSources = ['pinterest', 'unsplash', 'pexels', 'wikimedia', 'pixabay', 'openverse', 'pollinations-ai'];
     if (trustedSources.some(src => image.source?.includes(src))) {
       score += 0.3;
     }

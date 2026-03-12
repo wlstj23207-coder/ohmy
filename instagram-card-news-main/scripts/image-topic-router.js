@@ -158,6 +158,7 @@ const TOPIC_CRITERIA = {
  */
 const PROVIDER_PRIORITIES = {
   [TOPIC_TYPES.ABSTRACT_EXPLAINER]: [
+    'pinterest',
     'pollinations',
     'openverse',
     'pexels',
@@ -166,6 +167,7 @@ const PROVIDER_PRIORITIES = {
     'wikimedia',
   ],
   [TOPIC_TYPES.FACTUAL_ENTITY]: [
+    'pinterest',
     'wikimedia',  // Wikimedia is keyless, prioritize for factual topics
     'pollinations',
     'openverse',
@@ -174,6 +176,7 @@ const PROVIDER_PRIORITIES = {
     'unsplash',
   ],
   [TOPIC_TYPES.CURRENT_NEWS]: [
+    'pinterest',
     'wikimedia',  // Good for current events coverage
     'pollinations',
     'openverse',
@@ -282,6 +285,7 @@ function routeProviders(topicType) {
   if (!priorities) {
     console.warn(`Unknown topic type: ${topicType}, using default priorities`);
     return [
+      'pinterest',
       'pollinations',
       'openverse',
       'pexels',
@@ -300,6 +304,12 @@ function routeProviders(topicType) {
  */
 function getAvailableProviders() {
   return {
+    pinterest: {
+      name: 'Pinterest',
+      requires_api_key: false,
+      description: 'Pinterest pin images (public search)',
+      keyless: true,
+    },
     pexels: {
       name: 'Pexels',
       requires_api_key: true,

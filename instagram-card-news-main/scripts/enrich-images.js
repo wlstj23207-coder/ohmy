@@ -28,7 +28,8 @@ async function enrichSlidesWithImages(opts = {}) {
   const maxImagesPerQuery = Number.isFinite(Number(opts.maxImagesPerQuery)) ? Number(opts.maxImagesPerQuery) : 8;
   const force = !!opts.force;
   const refresh = !!opts.refresh;
-  const unsplashOnly = opts.unsplashOnly !== false;
+  const pinterestOnly = opts.pinterestOnly !== false;
+  const unsplashOnly = !!opts.unsplashOnly;
   const write = opts.write !== false;
 
   if (!fs.existsSync(slidesPath)) {
@@ -48,6 +49,7 @@ async function enrichSlidesWithImages(opts = {}) {
     console.log(`   discussion context loaded: ${discussionPath}`);
   }
   console.log(`   minScore: ${minScore}, maxImagesPerQuery: ${maxImagesPerQuery}, force: ${force}`);
+  console.log(`   pinterestOnly: ${pinterestOnly}`);
   console.log(`   unsplashOnly: ${unsplashOnly}`);
 
   const result = await fetcher.attachImagesToSlides(slides, topic, {
@@ -55,6 +57,7 @@ async function enrichSlidesWithImages(opts = {}) {
     minScore,
     maxImagesPerQuery,
     discussionContext,
+    pinterestOnly,
     unsplashOnly,
     refresh,
   });
@@ -100,8 +103,14 @@ function parseArgs(argv) {
         break;
       case '--unsplash-only':
         opts.unsplashOnly = true;
+        opts.pinterestOnly = false;
+        break;
+      case '--pinterest-only':
+        opts.pinterestOnly = true;
+        opts.unsplashOnly = false;
         break;
       case '--allow-multi-provider':
+        opts.pinterestOnly = false;
         opts.unsplashOnly = false;
         break;
       default:

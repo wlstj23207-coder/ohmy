@@ -85,6 +85,50 @@ function applyPlaceholders(html, slide, opts, index, total) {
 }
 
 /**
+ * Force slide background image across templates when image_url exists.
+ * This guarantees Unsplash images are visible even in templates that do not
+ * natively bind {{image_url}} as a background.
+ * @param {string} html
+ * @param {object} slide
+ * @returns {string}
+ */
+function injectGlobalBackgroundStyle(html, slide) {
+  const imageUrl = (slide.image_url || '').trim();
+  if (!imageUrl) return html;
+
+  const safeUrl = imageUrl.replace(/'/g, "\\'");
+  const style = `
+<style id="codex-global-bg">
+  html, body {
+    position: relative !important;
+  }
+  body {
+    background-image: url('${safeUrl}') !important;
+    background-size: cover !important;
+    background-position: center center !important;
+    background-repeat: no-repeat !important;
+  }
+  body::before {
+    content: '' !important;
+    position: absolute !important;
+    inset: 0 !important;
+    background: linear-gradient(180deg, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.48) 100%) !important;
+    pointer-events: none !important;
+    z-index: 0 !important;
+  }
+  body > * {
+    position: relative !important;
+    z-index: 1 !important;
+  }
+</style>`;
+
+  if (html.includes('</head>')) {
+    return html.replace('</head>', `${style}\n</head>`);
+  }
+  return `${style}\n${html}`;
+}
+
+/**
  * Main render function.
  * @param {object} opts - Options
  * @param {string} opts.slidesPath - Path to slides.json
@@ -109,6 +153,7 @@ async function render(opts = {}) {
       force: opts.forceImages,
       minScore: opts.minImageScore,
       maxImagesPerQuery: opts.maxImagesPerQuery,
+      pinterestOnly: opts.pinterestOnly !== false,
       unsplashOnly: opts.unsplashOnly !== false,
       write: true,
     });
@@ -157,9 +202,10 @@ async function render(opts = {}) {
 
       const rawHtml = fs.readFileSync(templateFile, 'utf8');
       const processedHtml = applyPlaceholders(rawHtml, slide, { accent, account }, i, total);
+      const withGlobalBackground = injectGlobalBackgroundStyle(processedHtml, slide);
 
       // Use domcontentloaded so remote image endpoints do not block indefinitely.
-      await page.setContent(processedHtml, { waitUntil: 'domcontentloaded', timeout: 45000 });
+      await page.setContent(withGlobalBackground, { waitUntil: 'domcontentloaded', timeout: 45000 });
       // Give late-loading images a short window without making rendering hang.
       await new Promise((resolve) => setTimeout(resolve, 1200));
 
@@ -191,7 +237,8 @@ function parseArgs(argv) {
   const opts = {
     autoImages: true,
     forceImages: true,
-    unsplashOnly: true,
+    pinterestOnly: true,
+    unsplashOnly: false,
   };
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
@@ -224,8 +271,14 @@ function parseArgs(argv) {
         break;
       case '--unsplash-only':
         opts.unsplashOnly = true;
+        opts.pinterestOnly = false;
+        break;
+      case '--pinterest-only':
+        opts.pinterestOnly = true;
+        opts.unsplashOnly = false;
         break;
       case '--allow-multi-provider':
+        opts.pinterestOnly = false;
         opts.unsplashOnly = false;
         break;
       case '--min-image-score':
