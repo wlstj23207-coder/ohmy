@@ -158,6 +158,7 @@ const TOPIC_CRITERIA = {
  */
 const PROVIDER_PRIORITIES = {
   [TOPIC_TYPES.ABSTRACT_EXPLAINER]: [
+    'pollinations',
     'openverse',
     'pexels',
     'pixabay',
@@ -166,6 +167,7 @@ const PROVIDER_PRIORITIES = {
   ],
   [TOPIC_TYPES.FACTUAL_ENTITY]: [
     'wikimedia',  // Wikimedia is keyless, prioritize for factual topics
+    'pollinations',
     'openverse',
     'pexels',
     'pixabay',
@@ -173,6 +175,7 @@ const PROVIDER_PRIORITIES = {
   ],
   [TOPIC_TYPES.CURRENT_NEWS]: [
     'wikimedia',  // Good for current events coverage
+    'pollinations',
     'openverse',
     'pixabay',
     'pexels',
@@ -279,6 +282,7 @@ function routeProviders(topicType) {
   if (!priorities) {
     console.warn(`Unknown topic type: ${topicType}, using default priorities`);
     return [
+      'pollinations',
       'openverse',
       'pexels',
       'pixabay',
@@ -306,6 +310,12 @@ function getAvailableProviders() {
       name: 'Openverse',
       requires_api_key: false,
       description: 'Openly licensed images with rich attribution metadata',
+      keyless: true,
+    },
+    pollinations: {
+      name: 'Pollinations AI',
+      requires_api_key: false,
+      description: 'Keyless AI image generation from text prompts',
       keyless: true,
     },
     pixabay: {

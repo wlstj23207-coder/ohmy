@@ -161,12 +161,13 @@ function testProviderRoutingAbstract() {
   const topicType = 'abstract_explainer';
   const priorities = routeProviders(topicType);
 
-  assertArrayLength(priorities, 5, 'Should have 5 providers');
-  assertEqual(priorities[0], 'openverse', 'First priority should be openverse');
-  assertEqual(priorities[1], 'pexels', 'Second priority should be pexels');
-  assertEqual(priorities[2], 'pixabay', 'Third priority should be pixabay');
-  assertEqual(priorities[3], 'unsplash', 'Fourth priority should be unsplash');
-  assertEqual(priorities[4], 'wikimedia', 'Fifth priority should be wikimedia');
+  assertArrayLength(priorities, 6, 'Should have 6 providers');
+  assertEqual(priorities[0], 'pollinations', 'First priority should be pollinations');
+  assertEqual(priorities[1], 'openverse', 'Second priority should be openverse');
+  assertEqual(priorities[2], 'pexels', 'Third priority should be pexels');
+  assertEqual(priorities[3], 'pixabay', 'Fourth priority should be pixabay');
+  assertEqual(priorities[4], 'unsplash', 'Fifth priority should be unsplash');
+  assertEqual(priorities[5], 'wikimedia', 'Sixth priority should be wikimedia');
   console.log(`  ✓ Abstract explainer routing: ${priorities.join(' → ')}`);
 }
 
@@ -177,12 +178,13 @@ function testProviderRoutingFactual() {
   const topicType = 'factual_entity';
   const priorities = routeProviders(topicType);
 
-  assertArrayLength(priorities, 5, 'Should have 5 providers');
+  assertArrayLength(priorities, 6, 'Should have 6 providers');
   assertEqual(priorities[0], 'wikimedia', 'First priority should be wikimedia (keyless)');
-  assertEqual(priorities[1], 'openverse', 'Second priority should be openverse');
-  assertEqual(priorities[2], 'pexels', 'Third priority should be pexels');
-  assertEqual(priorities[3], 'pixabay', 'Fourth priority should be pixabay');
-  assertEqual(priorities[4], 'unsplash', 'Fifth priority should be unsplash');
+  assertEqual(priorities[1], 'pollinations', 'Second priority should be pollinations');
+  assertEqual(priorities[2], 'openverse', 'Third priority should be openverse');
+  assertEqual(priorities[3], 'pexels', 'Fourth priority should be pexels');
+  assertEqual(priorities[4], 'pixabay', 'Fifth priority should be pixabay');
+  assertEqual(priorities[5], 'unsplash', 'Sixth priority should be unsplash');
   console.log(`  ✓ Factual entity routing: ${priorities.join(' → ')}`);
 }
 
@@ -193,12 +195,13 @@ function testProviderRoutingNews() {
   const topicType = 'current_news';
   const priorities = routeProviders(topicType);
 
-  assertArrayLength(priorities, 5, 'Should have 5 providers');
+  assertArrayLength(priorities, 6, 'Should have 6 providers');
   assertEqual(priorities[0], 'wikimedia', 'First priority should be wikimedia');
-  assertEqual(priorities[1], 'openverse', 'Second priority should be openverse');
-  assertEqual(priorities[2], 'pixabay', 'Third priority should be pixabay');
-  assertEqual(priorities[3], 'pexels', 'Fourth priority should be pexels');
-  assertEqual(priorities[4], 'unsplash', 'Fifth priority should be unsplash');
+  assertEqual(priorities[1], 'pollinations', 'Second priority should be pollinations');
+  assertEqual(priorities[2], 'openverse', 'Third priority should be openverse');
+  assertEqual(priorities[3], 'pixabay', 'Fourth priority should be pixabay');
+  assertEqual(priorities[4], 'pexels', 'Fifth priority should be pexels');
+  assertEqual(priorities[5], 'unsplash', 'Sixth priority should be unsplash');
   console.log(`  ✓ Current news routing: ${priorities.join(' → ')}`);
 }
 
@@ -207,7 +210,7 @@ function testProviderRoutingNews() {
  */
 function testProviderRoutingUnknown() {
   const priorities = routeProviders('unknown_topic_type');
-  assertArrayLength(priorities, 5, 'Should have 5 providers for unknown type');
+  assertArrayLength(priorities, 6, 'Should have 6 providers for unknown type');
   console.log(`  ✓ Unknown type routing: ${priorities.join(' → ')}`);
 }
 
@@ -218,18 +221,20 @@ function testAvailableProviders() {
   const providers = getAvailableProviders();
 
   assert(providers.pexels, 'Pexels should be available');
+  assert(providers.pollinations, 'Pollinations AI should be available');
   assert(providers.openverse, 'Openverse should be available');
   assert(providers.pixabay, 'Pixabay should be available');
   assert(providers.unsplash, 'Unsplash should be available');
   assert(providers.wikimedia, 'Wikimedia Commons should be available');
 
   assertEqual(providers.pexels.requires_api_key, true, 'Pexels requires API key');
+  assertEqual(providers.pollinations.requires_api_key, false, 'Pollinations AI is keyless');
   assertEqual(providers.openverse.requires_api_key, false, 'Openverse is keyless');
   assertEqual(providers.pixabay.requires_api_key, true, 'Pixabay requires API key');
   assertEqual(providers.unsplash.requires_api_key, true, 'Unsplash requires API key');
   assertEqual(providers.wikimedia.requires_api_key, false, 'Wikimedia Commons is keyless');
 
-  console.log(`  ✓ All 5 providers available`);
+  console.log(`  ✓ All 6 providers available`);
   console.log(`  ✓ Wikimedia Commons is keyless: ${!providers.wikimedia.requires_api_key}`);
 }
 
@@ -411,7 +416,7 @@ function testRoutingAnalysis() {
   topics.forEach(topic => {
     const analysis = analyzeTopic(topic);
     assert(analysis.classification, 'Should have classification');
-    assertArrayLength(analysis.provider_priorities, 5, 'Should have 5 provider priorities');
+    assertArrayLength(analysis.provider_priorities, 6, 'Should have 6 provider priorities');
     console.log(`  ✓ "${topic}" → ${analysis.classification.label}`);
   });
 }

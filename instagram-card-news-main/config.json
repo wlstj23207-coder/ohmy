@@ -3,7 +3,7 @@
   "defaults": {
     "template": "clean",
     "accent_color": "#3B82F6",
-    "account_name": "my_account",
+    "account_name": "jinseo",
     "slide_count": 7
   },
   "templates": {
@@ -36,6 +36,11 @@
       "description": "매거진 스타일 포토 + 화이트 클린",
       "accent_color": "#3B82F6",
       "background": "photo-white"
+    },
+    "gorp": {
+      "description": "고프코어 레퍼런스 스타일 풀배경 + 다크 오버레이 + 강한 화이트 타이포",
+      "accent_color": "#9CA3AF",
+      "background": "photo-dark"
     },
     "clean": {
       "description": "클린 에디토리얼 스타일 라이트그레이 + 그린 하이라이트",

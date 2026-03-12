@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Gorp Split</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:1080px;height:1350px;overflow:hidden;position:relative;font-family:'Pretendard',sans-serif;background:#111827}
+.bg{position:absolute;inset:0;background:url('{{image_url}}') center/cover no-repeat,linear-gradient(145deg,#1f2937,#0f172a)}
+.ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.2) 0%,rgba(0,0,0,.5) 45%,rgba(0,0,0,.86) 100%)}
+.wrap{position:absolute;inset:0;padding:72px 64px 86px;color:#fff;display:flex;flex-direction:column}
+.headline{font-size:68px;font-weight:900;line-height:1.08;letter-spacing:-.035em;text-shadow:0 4px 14px rgba(0,0,0,.55)}
+.grid{margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.box{background:rgba(0,0,0,.35);backdrop-filter:blur(2px);border:1px solid rgba(255,255,255,.28);border-radius:16px;padding:24px 20px 22px}
+.box h3{font-size:32px;font-weight:800;margin-bottom:10px}
+.box p{font-size:28px;line-height:1.35;font-weight:600;color:rgba(255,255,255,.92)}
+.meta{margin-top:22px;display:flex;justify-content:space-between;font-size:22px;color:rgba(255,255,255,.78);font-weight:600}
+</style></head>
+<body><div class="bg"></div><div class="ov"></div><div class="wrap">
+<h1 class="headline">{{headline}}</h1>
+<div class="grid">
+  <div class="box"><h3>{{left_title}}</h3><p>{{left_body}}</p></div>
+  <div class="box"><h3>{{right_title}}</h3><p>{{right_body}}</p></div>
+</div>
+<div class="meta"><span>@{{account_name}}</span><span>{{slide_number}} / {{total_slides}}</span></div>
+</div></body></html>

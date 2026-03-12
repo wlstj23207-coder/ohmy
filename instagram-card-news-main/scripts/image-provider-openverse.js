@@ -8,7 +8,7 @@ const https = require('https');
  */
 class OpenverseProvider {
   constructor(options = {}) {
-    this.baseUrl = options.baseUrl || 'https://api.openverse.org/v1/images';
+    this.baseUrl = options.baseUrl || 'https://api.openverse.engineering/v1/images/';
   }
 
   /**
@@ -45,6 +45,14 @@ class OpenverseProvider {
         res.on('data', (chunk) => { data += chunk; });
         res.on('end', () => {
           try {
+            if (res.statusCode < 200 || res.statusCode >= 300) {
+              reject(new Error(`Openverse API HTTP ${res.statusCode}: ${data.slice(0, 160)}`));
+              return;
+            }
+            if (!data || !data.trim()) {
+              reject(new Error('Openverse API returned empty body'));
+              return;
+            }
             const response = JSON.parse(data);
             const images = this.parseImages(response.results || []);
             resolve(images);

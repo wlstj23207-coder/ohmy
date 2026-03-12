@@ -28,6 +28,7 @@ async function enrichSlidesWithImages(opts = {}) {
   const maxImagesPerQuery = Number.isFinite(Number(opts.maxImagesPerQuery)) ? Number(opts.maxImagesPerQuery) : 8;
   const force = !!opts.force;
   const refresh = !!opts.refresh;
+  const unsplashOnly = opts.unsplashOnly !== false;
   const write = opts.write !== false;
 
   if (!fs.existsSync(slidesPath)) {
@@ -47,12 +48,14 @@ async function enrichSlidesWithImages(opts = {}) {
     console.log(`   discussion context loaded: ${discussionPath}`);
   }
   console.log(`   minScore: ${minScore}, maxImagesPerQuery: ${maxImagesPerQuery}, force: ${force}`);
+  console.log(`   unsplashOnly: ${unsplashOnly}`);
 
   const result = await fetcher.attachImagesToSlides(slides, topic, {
     force,
     minScore,
     maxImagesPerQuery,
     discussionContext,
+    unsplashOnly,
     refresh,
   });
 
@@ -94,6 +97,12 @@ function parseArgs(argv) {
         break;
       case '--dry-run':
         opts.write = false;
+        break;
+      case '--unsplash-only':
+        opts.unsplashOnly = true;
+        break;
+      case '--allow-multi-provider':
+        opts.unsplashOnly = false;
         break;
       default:
         console.warn(`Unknown argument: ${args[i]}`);

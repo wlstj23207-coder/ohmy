@@ -6,6 +6,7 @@ const https = require('https');
 const PixabayProvider = require('./image-provider-pixabay');
 const WikimediaProvider = require('./image-provider-wikimedia');
 const OpenverseProvider = require('./image-provider-openverse');
+const PollinationsProvider = require('./image-provider-pollinations');
 const {
   classifyTopic,
   routeProviders,
@@ -18,6 +19,7 @@ const {
  */
 class ImageFetcher {
   constructor(options = {}) {
+    this.loadLocalEnv();
     this.cacheSize = options.cacheSize || 50;
     this.maxImages = options.maxImages || 10;
     this.qualityFilter = options.qualityFilter || ['high', 'medium'];
@@ -42,6 +44,33 @@ class ImageFetcher {
     this.pixabayProvider = new PixabayProvider({ apiKey: this.pixabayApiKey });
     this.wikimediaProvider = new WikimediaProvider();
     this.openverseProvider = new OpenverseProvider();
+    this.pollinationsProvider = new PollinationsProvider();
+  }
+
+  /**
+   * Load .env files without external dependencies.
+   */
+  loadLocalEnv() {
+    const candidates = [
+      path.join(process.cwd(), '.env'),
+      path.join(process.cwd(), '..', '.env'),
+    ];
+
+    for (const envPath of candidates) {
+      if (!fs.existsSync(envPath)) continue;
+      const lines = fs.readFileSync(envPath, 'utf8').split('\n');
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        const idx = trimmed.indexOf('=');
+        if (idx <= 0) continue;
+        const key = trimmed.slice(0, idx).trim();
+        const value = trimmed.slice(idx + 1).trim().replace(/^['"]|['"]$/g, '');
+        if (key && !process.env[key]) {
+          process.env[key] = value;
+        }
+      }
+    }
   }
 
   /**
@@ -73,6 +102,7 @@ class ImageFetcher {
       refresh = false,
       useRouting = true, // Enable intelligent routing
     } = options;
+    const normalizedMinScore = minScore > 1 ? (minScore / 100) : minScore;
 
     console.log(`🔍 Fetching images for topic: "${topic}"`);
 
@@ -99,8 +129,17 @@ class ImageFetcher {
 
     if (useRouting && routingInfo) {
       // Use intelligent routing
-      const priorities = routingInfo.provider_priorities;
+      const priorities = [...routingInfo.provider_priorities];
       const providers = getAvailableProviders();
+
+      // If Unsplash key is configured, prioritize Unsplash first for richer fashion photos.
+      if (this.unsplashApiKey) {
+        const idx = priorities.indexOf('unsplash');
+        if (idx > -1) {
+          priorities.splice(idx, 1);
+          priorities.unshift('unsplash');
+        }
+      }
 
       console.log(`🎯 Using routing: ${priorities.join(' → ')}`);
 
@@ -129,6 +168,8 @@ class ImageFetcher {
             images = await this.wikimediaProvider.fetchImages(topic, maxImages * 2);
           } else if (providerName === 'openverse') {
             images = await this.openverseProvider.fetchImages(topic, maxImages * 2);
+          } else if (providerName === 'pollinations') {
+            images = await this.pollinationsProvider.fetchImages(topic, maxImages);
           } else if (providerName === 'pexels') {
             images = await this.fetchFromPexels(topic, maxImages * 2);
           } else if (providerName === 'unsplash') {
@@ -168,7 +209,7 @@ class ImageFetcher {
     const scoredImages = this.scoreImages(allImages, topic);
 
     // Filter by minimum score
-    const filteredImages = scoredImages.filter(img => img.score >= minScore);
+    const filteredImages = scoredImages.filter(img => img.score >= normalizedMinScore);
 
     // Limit to max images
     const selectedImages = filteredImages.slice(0, maxImages);
@@ -176,7 +217,7 @@ class ImageFetcher {
     // Sort by score
     selectedImages.sort((a, b) => b.score - a.score);
 
-    console.log(`✓ Selected ${selectedImages.length} images with score >= ${minScore}`);
+    console.log(`✓ Selected ${selectedImages.length} images with score >= ${normalizedMinScore}`);
 
     // Cache results
     if (selectedImages.length > 0 && imageUsage === 'topic-matched') {
@@ -218,6 +259,8 @@ class ImageFetcher {
         return await this.wikimediaProvider.fetchImages(topic, limit);
       case 'openverse':
         return await this.openverseProvider.fetchImages(topic, limit);
+      case 'pollinations':
+        return await this.pollinationsProvider.fetchImages(topic, limit);
       case 'pexels':
         return await this.fetchFromPexels(topic, limit);
       case 'unsplash':
@@ -349,6 +392,8 @@ class ImageFetcher {
           results[name] = await this.wikimediaProvider.test();
         } else if (name === 'openverse') {
           results[name] = await this.openverseProvider.test();
+        } else if (name === 'pollinations') {
+          results[name] = await this.pollinationsProvider.test();
         } else if (name === 'pexels') {
           results[name] = !!(this.pexelsApiKey && await this.fetchFromPexels('test', 1).catch(() => false));
         } else if (name === 'unsplash') {
@@ -432,6 +477,29 @@ class ImageFetcher {
 
     // Keep query compact for provider APIs while preserving topic intent.
     return cleaned.slice(0, 220);
+  }
+
+  /**
+   * Build no-key fallback image URL (Unsplash Source endpoint).
+   * @param {string} query
+   * @param {number} salt
+   * @returns {string}
+   */
+  buildFallbackImageUrl(query, salt = 1) {
+    const normalized = (query || 'fashion style')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const prompt = `${normalized}, editorial fashion photo, gorpcore look, urban style, portrait composition`;
+    const params = new URLSearchParams({
+      width: '1080',
+      height: '1350',
+      model: 'flux',
+      seed: String(2000 + salt),
+      nologo: 'true',
+      safe: 'true',
+      enhance: 'true',
+    });
+    return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?${params.toString()}`;
   }
 
   /**
@@ -519,6 +587,8 @@ class ImageFetcher {
       usedUrls = new Set(),
       usedSources = new Map(),
       discussionContext = '',
+      allowSourceFallback = true,
+      unsplashOnly = false,
       refresh = false,
     } = options;
 
@@ -527,6 +597,38 @@ class ImageFetcher {
     const slideQuery = this.buildSlideQuery(topic, slide, discussionSnippet);
     const fallbackQuery = [topic, slide.headline].filter(Boolean).join(' ').trim();
     const queries = [...new Set([slideQuery, fallbackQuery, topic, discussionSnippet].filter(Boolean))];
+
+    // Explicit Unsplash-only mode for consistent photo style across all slides.
+    if (unsplashOnly) {
+      for (const query of queries) {
+        try {
+          const images = await this.fetchFromUnsplash(query, Math.max(5, maxImagesPerQuery));
+          if (images && images.length > 0) {
+            const pick = images.find((img) => img.url && !usedUrls.has(img.url)) || images[0];
+            if (pick && pick.url) {
+              return { ...pick, final_score: 999 };
+            }
+          }
+        } catch (_) {
+          // Keep trying with next query.
+        }
+      }
+
+      if (allowSourceFallback) {
+        const q = `${topic} ${(slide.headline || '')}`.trim();
+        const safe = encodeURIComponent(`gorpcore fashion outfit street style ${q}`.trim());
+        const url = `https://source.unsplash.com/1080x1350/?${safe}&sig=${usedUrls.size + 1}`;
+        return {
+          url,
+          full_url: url,
+          source: 'unsplash-source-fallback',
+          alt: q,
+          score: 0.58,
+          final_score: 0.58,
+        };
+      }
+      return null;
+    }
 
     let candidates = [];
     for (const query of queries) {
@@ -543,7 +645,21 @@ class ImageFetcher {
       }
     }
 
-    if (!candidates.length) return null;
+    if (!candidates.length) {
+      if (!allowSourceFallback) return null;
+      const fallbackQuery = [topic, slide.headline, slide.body, 'gorpcore fashion streetwear outfit']
+        .filter(Boolean)
+        .join(' ');
+      const fallbackUrl = this.buildFallbackImageUrl(fallbackQuery, usedUrls.size + 1);
+      return {
+        url: fallbackUrl,
+        full_url: fallbackUrl,
+        source: 'unsplash-source-fallback',
+        alt: fallbackQuery,
+        score: 58,
+        final_score: 58,
+      };
+    }
 
     // Deduplicate by URL while keeping best base score.
     const deduped = new Map();
@@ -564,9 +680,10 @@ class ImageFetcher {
       const sourceName = image.source || 'unknown';
       const usedCount = usedSources.get(sourceName) || 0;
       const sourceDiversityPenalty = Math.min(usedCount * 4, 16);
+      const unsplashBonus = (this.unsplashApiKey && sourceName === 'unsplash') ? 18 : 0;
       return {
         ...image,
-        final_score: Math.round((base + context - duplicatePenalty - sourceDiversityPenalty) * 100) / 100,
+        final_score: Math.round((base + context + unsplashBonus - duplicatePenalty - sourceDiversityPenalty) * 100) / 100,
       };
     });
 
@@ -587,10 +704,20 @@ class ImageFetcher {
       minScore = 60,
       maxImagesPerQuery = 8,
       discussionContext = '',
+      unsplashOnly = false,
       refresh = false,
     } = options;
 
-    const imageSlideTypes = new Set(['content-image', 'content-fullimage']);
+    const imageSlideTypes = new Set([
+      'cover',
+      'content',
+      'content-badge',
+      'content-stat',
+      'content-image',
+      'content-split',
+      'content-fullimage',
+      'cta',
+    ]);
     const usedUrls = new Set(
       slides
         .map((slide) => slide.image_url)
@@ -614,6 +741,8 @@ class ImageFetcher {
         usedUrls,
         usedSources,
         discussionContext,
+        unsplashOnly,
+        allowSourceFallback: true,
         refresh,
       });
 
@@ -715,7 +844,7 @@ class ImageFetcher {
     let score = 0.5;
 
     // Higher score for trusted sources
-    const trustedSources = ['unsplash', 'pexels', 'wikimedia', 'pixabay'];
+    const trustedSources = ['unsplash', 'pexels', 'wikimedia', 'pixabay', 'openverse', 'pollinations-ai'];
     if (trustedSources.some(src => image.source?.includes(src))) {
       score += 0.3;
     }

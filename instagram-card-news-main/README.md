@@ -87,7 +87,7 @@ claude
 | 템플릿 | `clean` | 템플릿 스타일 (아래 8종 참고) |
 | 슬라이드 수 | `7` | 5~12장 |
 | 악센트 색상 | `#8BC34A` | hex 코드 |
-| 계정명 | `my_account` | Instagram 계정명 |
+| 계정명 | `jinseo` | Instagram 계정명 (항상 고정) |
 
 ---
 
@@ -123,12 +123,13 @@ Step 5  시각 검토 — 가독성, 텍스트 잘림, 흐름, CTA 명확성 확
 
 ## 🖼️ 이미지 풀러 기능 (강화됨)
 
-이미지 풀러는 **Openverse + Pixabay + Wikimedia Commons**를 포함해 지능형 주제 기반 라우팅을 지원합니다.
+이미지 풀러는 **Pollinations AI + Openverse + Pixabay + Wikimedia Commons**를 포함해 지능형 주제 기반 라우팅을 지원합니다.
 
 ### 이미지 소스
 
 | 소스 | API 키 필요 | 특징 |
 |---|---|---|
+| **Pollinations AI** | ❌ 필요 없음 (키리스) | 프롬프트 기반 AI 이미지 생성 (슬라이드 자동 채움) |
 | **Openverse** | ❌ 필요 없음 (키리스) | 오픈 라이선스 이미지 + 메타데이터 풍부 |
 | **Pexels** | ✅ 필요 | 고화질 무료 사진 및 비디오 |
 | **Pixabay** | ✅ 필요 | 무료 사진, 일러스트, 벡터 |
@@ -151,14 +152,14 @@ Step 5  시각 검토 — 가독성, 텍스트 잘림, 흐름, CTA 명확성 확
 
 ```
 abstract_explainer (이론/개념 설명)
-  → Openverse → Pexels → Pixabay → Unsplash → Wikimedia Commons
+  → Pollinations AI → Openverse → Pexels → Pixabay → Unsplash → Wikimedia Commons
 
 factual_entity (사물/명사 지식)
-  → Wikimedia Commons → Openverse → Pexels → Pixabay → Unsplash
+  → Wikimedia Commons → Pollinations AI → Openverse → Pexels → Pixabay → Unsplash
   (Wikimedia/Openverse 키리스 우선)
 
 current_news (실시간 뉴스)
-  → Wikimedia Commons → Openverse → Pixabay → Pexels → Unsplash
+  → Wikimedia Commons → Pollinations AI → Openverse → Pixabay → Pexels → Unsplash
 ```
 
 ### 라우팅 동작
@@ -205,6 +206,7 @@ console.log(analysis.provider_priorities);
 | **premium** | 다크 프리미엄형 | `#A855F7` 바이올렛 | 딥 다크 |
 | **toss** | 토스 스타일 미니멀 | `#3182F6` 블루 | 다크 플랫 |
 | **magazine** | 매거진/SNS형 | `#3B82F6` 블루 | 포토+화이트 |
+| **gorp** | 고프코어 레퍼런스형 | `#9CA3AF` 쿨그레이 | 포토+다크오버레이 |
 | **blueprint** | 블루프린트 프레젠테이션형 | `#7BA7CC` 소프트블루 | 라이트블루그레이 |
 
 ---
@@ -255,6 +257,7 @@ node scripts/render.js \
   --topic "AI 트렌드 2025" \
   --discussion-file workspace/discussion.md \
   --auto-images \
+  --unsplash-only \
   --min-image-score 60 \
   --max-images-per-query 8
 ```
@@ -266,6 +269,7 @@ npm run enrich-images -- \
   --slides workspace/slides.json \
   --topic "AI 트렌드 2025" \
   --discussion-file workspace/discussion.md \
+  --unsplash-only \
   --min-score 60
 ```
 

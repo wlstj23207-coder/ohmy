@@ -1,5 +1,7 @@
 'use strict';
 
+const https = require('https');
+
 /**
  * Wikimedia Commons Image Provider
  * Keyless API - no API key required
@@ -21,22 +23,29 @@ class WikimediaProvider {
     const { imageusage = 'all', prop = 'imageinfo' } = options;
 
     return new Promise((resolve, reject) => {
-      // Build API URL
+      // Use generator=search in File namespace so imageinfo is attached to each page.
       const params = new URLSearchParams({
         action: 'query',
-        list: 'search',
-        srsearch: query,
-        srlimit: limit,
-        srprop: 'imageinfo|snippet',
+        generator: 'search',
+        gsrsearch: query,
+        gsrnamespace: '6', // File:
+        gsrlimit: limit,
+        gsrprop: 'snippet',
+        prop: 'imageinfo',
         iiprop: 'url|size|extmetadata|user|timestamp|license|url',
         iiurlwidth: 1080,
         iiurlheight: 1350,
         format: 'json',
+        formatversion: '2',
       });
 
       const url = `${this.baseUrl}?${params.toString()}`;
 
-      https.get(url, (res) => {
+      https.get(url, {
+        headers: {
+          'User-Agent': 'instagram-card-news/1.0 (tooling)',
+        },
+      }, (res) => {
         let data = '';
 
         res.on('data', (chunk) => {
@@ -45,8 +54,13 @@ class WikimediaProvider {
 
         res.on('end', () => {
           try {
+            if (res.statusCode < 200 || res.statusCode >= 300) {
+              reject(new Error(`Wikimedia API HTTP ${res.statusCode}: ${data.slice(0, 160)}`));
+              return;
+            }
             const response = JSON.parse(data);
-            const images = this.parseImages(response.query.search);
+            const pages = (response.query && response.query.pages) ? response.query.pages : [];
+            const images = this.parseImages(pages);
             resolve(images);
           } catch (error) {
             reject(new Error(`Wikimedia API parse error: ${error.message}`));
@@ -63,10 +77,10 @@ class WikimediaProvider {
    * @param {Array} searchResults - Wikimedia search results
    * @returns {Array} Standardized image objects
    */
-  parseImages(searchResults) {
-    if (!Array.isArray(searchResults)) return [];
+  parseImages(results) {
+    if (!Array.isArray(results)) return [];
 
-    return searchResults.map((result) => {
+    return results.map((result) => {
       // Find image info in the results
       const imageInfo = result.imageinfo ? result.imageinfo[0] : null;
       if (!imageInfo) {
@@ -78,8 +92,8 @@ class WikimediaProvider {
       const url = thumburl || imageInfo.url;
 
       // Try to extract metadata
-      let title = result.title.replace('File:', '').replace('Image:', '');
-      let description = result.snippet.replace(/<\/?[^>]+>/g, '');
+      let title = (result.title || '').replace('File:', '').replace('Image:', '');
+      let description = (result.snippet || '').replace(/<\/?[^>]+>/g, '');
 
       // Get uploader info
       const user = imageInfo.user || 'Wikimedia User';
@@ -107,8 +121,8 @@ class WikimediaProvider {
       }
 
       // Extract Wikimedia category/namespace
-      const namespace = result.title.startsWith('File:') ? 'file' :
-                       result.title.startsWith('Category:') ? 'category' : 'other';
+      const namespace = (result.title || '').startsWith('File:') ? 'file' :
+                       (result.title || '').startsWith('Category:') ? 'category' : 'other';
 
       return {
         url: url,
@@ -120,7 +134,7 @@ class WikimediaProvider {
         source_url: `https://commons.wikimedia.org/wiki/File:${result.title.replace('File:', '').replace('Image:', '')}`,
         width: width,
         height: height,
-        id: result.pageid,
+        id: result.pageid || result.pageid,
         namespace: namespace,
         title: title,
         description: description,
@@ -193,7 +207,11 @@ class WikimediaProvider {
       const url = `${this.baseUrl}?${params.toString()}`;
 
       return new Promise((resolve, reject) => {
-        https.get(url, (res) => {
+        https.get(url, {
+          headers: {
+            'User-Agent': 'instagram-card-news/1.0 (tooling)',
+          },
+        }, (res) => {
           if (res.statusCode !== 200) {
             reject(new Error(`API returned status ${res.statusCode}`));
             return;
@@ -239,7 +257,11 @@ class WikimediaProvider {
 
       const url = `${this.baseUrl}?${params.toString()}`;
 
-      https.get(url, (res) => {
+      https.get(url, {
+        headers: {
+          'User-Agent': 'instagram-card-news/1.0 (tooling)',
+        },
+      }, (res) => {
         let data = '';
 
         res.on('data', (chunk) => {

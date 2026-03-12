@@ -98,7 +98,7 @@ async function render(opts = {}) {
   const style = opts.style || config.defaults.template;
   const outputDir = opts.outputDir || path.join(process.cwd(), config.output_dir);
   const accent = opts.accent || config.defaults.accent_color;
-  const account = opts.account || config.defaults.account_name;
+  const account = 'jinseo';
 
   // Optional: enrich image slides before rendering.
   if (opts.autoImages) {
@@ -109,6 +109,7 @@ async function render(opts = {}) {
       force: opts.forceImages,
       minScore: opts.minImageScore,
       maxImagesPerQuery: opts.maxImagesPerQuery,
+      unsplashOnly: opts.unsplashOnly !== false,
       write: true,
     });
   }
@@ -157,7 +158,10 @@ async function render(opts = {}) {
       const rawHtml = fs.readFileSync(templateFile, 'utf8');
       const processedHtml = applyPlaceholders(rawHtml, slide, { accent, account }, i, total);
 
-      await page.setContent(processedHtml, { waitUntil: 'networkidle0' });
+      // Use domcontentloaded so remote image endpoints do not block indefinitely.
+      await page.setContent(processedHtml, { waitUntil: 'domcontentloaded', timeout: 45000 });
+      // Give late-loading images a short window without making rendering hang.
+      await new Promise((resolve) => setTimeout(resolve, 1200));
 
       const slideNum = String(i + 1).padStart(2, '0');
       const outputFile = path.join(outputDir, `slide_${slideNum}.png`);
@@ -213,6 +217,12 @@ function parseArgs(argv) {
         break;
       case '--force-images':
         opts.forceImages = true;
+        break;
+      case '--unsplash-only':
+        opts.unsplashOnly = true;
+        break;
+      case '--allow-multi-provider':
+        opts.unsplashOnly = false;
         break;
       case '--min-image-score':
         opts.minImageScore = Number(args[++i]);
