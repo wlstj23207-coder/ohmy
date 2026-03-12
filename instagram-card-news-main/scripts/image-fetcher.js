@@ -43,6 +43,20 @@ class ImageFetcher {
   }
 
   /**
+   * Return API key value for provider.
+   * @param {string} providerName
+   * @returns {string|undefined}
+   */
+  getApiKeyForProvider(providerName) {
+    const keys = {
+      pexels: this.pexelsApiKey,
+      unsplash: this.unsplashApiKey,
+      pixabay: this.pixabayApiKey,
+    };
+    return keys[providerName];
+  }
+
+  /**
    * Main entry point - fetch images for a topic
    * @param {string} topic - Search topic
    * @param {object} options - Fetch options
@@ -96,7 +110,7 @@ class ImageFetcher {
 
         // Check if provider is available (has API key or is keyless)
         if (providerInfo.requires_api_key) {
-          const apiKey = this[`_${providerName}ApiKey`];
+          const apiKey = this.getApiKeyForProvider(providerName);
           if (!apiKey) {
             console.log(`  ⚠️ Skipping ${providerName} (API key not configured)`);
             continue;
@@ -382,6 +396,212 @@ class ImageFetcher {
   }
 
   /**
+   * Build a slide-aware search query.
+   * @param {string} topic
+   * @param {object} slide
+   * @returns {string}
+   */
+  buildSlideQuery(topic, slide) {
+    const parts = [
+      topic,
+      slide.headline,
+      slide.emphasis,
+      slide.badge_text,
+      slide.badge2_text,
+      slide.left_title,
+      slide.right_title,
+      slide.body,
+      slide.body2,
+      slide.subtext,
+    ].filter(Boolean);
+
+    const cleaned = parts
+      .join(' ')
+      .replace(/\n/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // Keep query compact for provider APIs while preserving topic intent.
+    return cleaned.slice(0, 160);
+  }
+
+  /**
+   * Build context keywords from slide content.
+   * @param {string} topic
+   * @param {object} slide
+   * @returns {Array<string>}
+   */
+  extractSlideKeywords(topic, slide) {
+    const raw = [
+      topic,
+      slide.headline,
+      slide.body,
+      slide.body2,
+      slide.emphasis,
+      slide.badge_text,
+      slide.badge2_text,
+      slide.left_title,
+      slide.right_title,
+      slide.subtext,
+    ].filter(Boolean).join(' ');
+
+    return this.extractKeywords(raw);
+  }
+
+  /**
+   * Additional score based on slide context and image type preference.
+   * @param {object} image
+   * @param {Array<string>} keywords
+   * @param {string} slideType
+   * @returns {number}
+   */
+  calculateSlideContextScore(image, keywords, slideType) {
+    if (!keywords.length) return 0;
+
+    const tags = Array.isArray(image.tags) ? image.tags.join(' ') : '';
+    const haystack = [
+      image.alt,
+      image.title,
+      image.description,
+      tags,
+      image.type,
+    ].filter(Boolean).join(' ').toLowerCase();
+
+    let keywordHits = 0;
+    for (const keyword of keywords) {
+      if (haystack.includes(keyword)) keywordHits += 1;
+    }
+
+    let bonus = (keywordHits / keywords.length) * 35;
+
+    // Design-oriented preference:
+    // - full image slides: prefer real photos over illustrations.
+    if (slideType === 'content-fullimage') {
+      if (image.type === 'photo') bonus += 10;
+      if (image.type === 'illustration' || image.type === 'vector') bonus -= 8;
+    }
+
+    return bonus;
+  }
+
+  /**
+   * Fetch the best image candidate for a specific slide.
+   * @param {string} topic
+   * @param {object} slide
+   * @param {object} options
+   * @returns {Promise<object|null>}
+   */
+  async fetchBestImageForSlide(topic, slide, options = {}) {
+    const {
+      minScore = 60,
+      maxImagesPerQuery = 8,
+      usedUrls = new Set(),
+      refresh = false,
+    } = options;
+
+    const slideQuery = this.buildSlideQuery(topic, slide);
+    const fallbackQuery = [topic, slide.headline].filter(Boolean).join(' ').trim();
+    const queries = [...new Set([slideQuery, fallbackQuery, topic].filter(Boolean))];
+
+    let candidates = [];
+    for (const query of queries) {
+      try {
+        const images = await this.fetchImages(query, {
+          maxImages: maxImagesPerQuery,
+          minScore,
+          refresh,
+          useRouting: true,
+        });
+        candidates = candidates.concat(images || []);
+      } catch (error) {
+        console.warn(`  ⚠️ Image fetch failed for query "${query}": ${error.message}`);
+      }
+    }
+
+    if (!candidates.length) return null;
+
+    // Deduplicate by URL while keeping best base score.
+    const deduped = new Map();
+    for (const candidate of candidates) {
+      const key = candidate.url || candidate.full_url;
+      if (!key) continue;
+      const prev = deduped.get(key);
+      if (!prev || (candidate.score || 0) > (prev.score || 0)) {
+        deduped.set(key, candidate);
+      }
+    }
+
+    const keywords = this.extractSlideKeywords(topic, slide);
+    const ranked = [...deduped.values()].map((image) => {
+      const base = typeof image.score === 'number' ? image.score : 0;
+      const context = this.calculateSlideContextScore(image, keywords, slide.type);
+      const duplicatePenalty = usedUrls.has(image.url) ? 30 : 0;
+      return {
+        ...image,
+        final_score: Math.round((base + context - duplicatePenalty) * 100) / 100,
+      };
+    });
+
+    ranked.sort((a, b) => b.final_score - a.final_score);
+    return ranked.find((img) => !usedUrls.has(img.url)) || ranked[0] || null;
+  }
+
+  /**
+   * Attach relevant images to image-capable slides.
+   * @param {Array<object>} slides
+   * @param {string} topic
+   * @param {object} options
+   * @returns {Promise<object>} Summary and updated slides
+   */
+  async attachImagesToSlides(slides, topic, options = {}) {
+    const {
+      force = false,
+      minScore = 60,
+      maxImagesPerQuery = 8,
+      refresh = false,
+    } = options;
+
+    const imageSlideTypes = new Set(['content-image', 'content-fullimage']);
+    const usedUrls = new Set(
+      slides
+        .map((slide) => slide.image_url)
+        .filter((url) => typeof url === 'string' && url.trim().length > 0)
+    );
+
+    let attached = 0;
+    let skipped = 0;
+
+    for (const slide of slides) {
+      if (!imageSlideTypes.has(slide.type)) continue;
+      if (!force && slide.image_url) {
+        skipped += 1;
+        continue;
+      }
+
+      const selected = await this.fetchBestImageForSlide(topic, slide, {
+        minScore,
+        maxImagesPerQuery,
+        usedUrls,
+        refresh,
+      });
+
+      if (selected && selected.url) {
+        slide.image_url = selected.url;
+        usedUrls.add(selected.url);
+        attached += 1;
+      }
+    }
+
+    return {
+      slides,
+      summary: {
+        attached,
+        skipped,
+      },
+    };
+  }
+
+  /**
    * Extract keywords from topic
    * @param {string} topic - Search topic
    * @returns {Array<string>} Array of keywords
@@ -505,6 +725,14 @@ class ImageFetcher {
       images: images.map(img => ({
         url: img.url,
         score: img.score,
+        source: img.source,
+        alt: img.alt,
+        title: img.title,
+        description: img.description,
+        width: img.width,
+        height: img.height,
+        type: img.type,
+        tags: img.tags,
         cached_at: img.analyzed_at,
       })),
       timestamp: now,

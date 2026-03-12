@@ -242,6 +242,30 @@ node scripts/render.js \
   --account "my_account"
 ```
 
+### 슬라이드 문맥 기반 이미지 자동 주입 + 렌더링
+
+`content-image`, `content-fullimage` 슬라이드에 대해 **주제 + 슬라이드 텍스트 문맥**으로 이미지를 자동 선택해 `slides.json`에 반영합니다.
+
+```bash
+node scripts/render.js \
+  --slides workspace/slides.json \
+  --style clean \
+  --output output/ \
+  --topic "AI 트렌드 2025" \
+  --auto-images \
+  --min-image-score 60 \
+  --max-images-per-query 8
+```
+
+이미지 주입만 먼저 실행하려면:
+
+```bash
+npm run enrich-images -- \
+  --slides workspace/slides.json \
+  --topic "AI 트렌드 2025" \
+  --min-score 60
+```
+
 ### 샘플 생성
 
 13개 슬라이드 타입을 모두 포함하는 샘플을 렌더링합니다:

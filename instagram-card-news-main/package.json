@@ -4,7 +4,8 @@
   "description": "Instagram card news generator with team agent orchestration",
   "scripts": {
     "render": "node scripts/render.js",
-    "sample": "node scripts/generate-samples.js"
+    "sample": "node scripts/generate-samples.js",
+    "enrich-images": "node scripts/enrich-images.js"
   },
   "dependencies": {
     "puppeteer": "^23.0.0"

@@ -3,6 +3,7 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
+const { enrichSlidesWithImages } = require('./enrich-images');
 
 // Load config
 const configPath = path.join(__dirname, '..', 'config.json');
@@ -99,6 +100,18 @@ async function render(opts = {}) {
   const accent = opts.accent || config.defaults.accent_color;
   const account = opts.account || config.defaults.account_name;
 
+  // Optional: enrich image slides before rendering.
+  if (opts.autoImages) {
+    await enrichSlidesWithImages({
+      slidesPath,
+      topic: opts.topic,
+      force: opts.forceImages,
+      minScore: opts.minImageScore,
+      maxImagesPerQuery: opts.maxImagesPerQuery,
+      write: true,
+    });
+  }
+
   // Read slides
   if (!fs.existsSync(slidesPath)) {
     throw new Error(`slides.json not found at: ${slidesPath}`);
@@ -187,6 +200,21 @@ function parseArgs(argv) {
         break;
       case '--account':
         opts.account = args[++i];
+        break;
+      case '--auto-images':
+        opts.autoImages = true;
+        break;
+      case '--topic':
+        opts.topic = args[++i];
+        break;
+      case '--force-images':
+        opts.forceImages = true;
+        break;
+      case '--min-image-score':
+        opts.minImageScore = Number(args[++i]);
+        break;
+      case '--max-images-per-query':
+        opts.maxImagesPerQuery = Number(args[++i]);
         break;
       default:
         console.warn(`Unknown argument: ${args[i]}`);
