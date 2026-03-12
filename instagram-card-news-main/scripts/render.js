@@ -188,7 +188,11 @@ async function render(opts = {}) {
 // Parse CLI arguments
 function parseArgs(argv) {
   const args = argv.slice(2);
-  const opts = {};
+  const opts = {
+    autoImages: true,
+    forceImages: true,
+    unsplashOnly: true,
+  };
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
       case '--slides':

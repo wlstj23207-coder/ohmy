@@ -1,7 +1,7 @@
 {
   "version": "3.0",
   "defaults": {
-    "template": "clean",
+    "template": "magazine",
     "accent_color": "#3B82F6",
     "account_name": "jinseo",
     "slide_count": 7

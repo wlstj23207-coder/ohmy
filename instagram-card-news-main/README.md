@@ -239,11 +239,15 @@ slides.json을 직접 작성하고 렌더링만 실행할 수도 있습니다:
 ```bash
 node scripts/render.js \
   --slides workspace/slides.json \
-  --style clean \
+  --style magazine \
   --output output/ \
-  --accent "#8BC34A" \
-  --account "my_account"
+  --topic "주제"
 ```
+
+기본 정책(항상 적용):
+- `magazine` 스타일
+- Unsplash 주제 연관 배경 자동 주입 (`unsplash-only`)
+- 계정명 `@jinseo` 고정
 
 ### 슬라이드 문맥 기반 이미지 자동 주입 + 렌더링
 
