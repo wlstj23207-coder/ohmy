@@ -1,64 +1,68 @@
 [
   {
-    "slide": 1,
     "type": "cover",
-    "headline": "2025년 1년동안<br>빌보드 top10 가수와 제목",
-    "subtext": "역대급 콜라보와 신예들의 대역전극,<br>2025년 팝 시장을 뒤흔든 10곡의 기록"
+    "headline": "26년 3월 13일\n안장 출근길 뉴스",
+    "subtext": "오늘의 인문학: 진격의 거인",
+    "emphasis": "AI·신뢰·속도"
   },
   {
-    "slide": 2,
-    "type": "content-badge",
-    "badge_text": "YEAR-END NO.1",
-    "headline": "Die with a Smile",
-    "body": "Lady Gaga x Bruno Mars의 환상적인 하모니.<br>2025년 전 세계인의 귀를 사로잡은 압도적 1위.",
-    "subtext": "25주 연속 상위권 랭크"
+    "type": "content",
+    "headline": "아마존, AI가 타사 쇼핑몰까지 대신 결제",
+    "body": "에이전트 커머스가 현실이 됐다.\n핵심은 결제 편의보다 신뢰·책임 구조다.",
+    "emphasis": "플랫폼 → 에이전트 전환"
   },
   {
-    "slide": 3,
-    "type": "content-grid",
-    "headline": "The Power of Hip-Hop & Pop",
-    "grid1_icon": "🔥",
-    "grid1_title": "Luther",
-    "grid1_desc": "Kendrick Lamar & SZA",
-    "grid2_icon": "👑",
-    "grid2_title": "Not Like Us",
-    "grid2_desc": "Kendrick Lamar",
-    "grid3_icon": "🎸",
-    "grid3_title": "Ordinary",
-    "grid3_desc": "Alex Warren",
-    "grid4_icon": "🦋",
-    "grid4_title": "Birds of a Feather",
-    "grid4_desc": "Billie Eilish"
+    "type": "content",
+    "headline": "지자체, 쿠팡에 결단 압박",
+    "body": "지방선거를 앞두고 물류 이슈가 정치 변수화.\n기업 의사결정이 지역 민심과 연결된다.",
+    "emphasis": "사업 = 정책 리스크 관리"
   },
   {
-    "slide": 4,
-    "type": "content-highlight",
-    "headline": "K-POP의 새로운 역사",
-    "emphasis": "APT. (ROSÉ & Bruno Mars)",
-    "body": "로제와 브루노 마스의 '아파트' 열풍.<br>한국어 가사가 포함된 곡으로 빌보드 연말 차트 9위 진입.",
-    "subtext": "글로벌 틱톡 & 릴스 챌린지 1위"
+    "type": "content",
+    "headline": "오아시스, 티몬 간판 내린다",
+    "body": "700억 베팅 이후 브랜드 리셋 수순.\n간판보다 운영 정상화와 신뢰 회복이 우선.",
+    "emphasis": "이름보다 체질 개선"
   },
   {
-    "slide": 5,
-    "type": "content-stat",
-    "headline": "Taylor Swift의 기록 경신",
-    "emphasis": "8 Weeks No.1",
-    "body": "'The Fate of Ophelia'로 여성 솔로 역대 최장기 차트인.<br>그녀의 시대는 여전히 현재진행형입니다."
+    "type": "content",
+    "headline": "패션위크 속 AI, 영향력은 런웨이 밖에서 폭발",
+    "body": "기획·비주얼·확산까지 AI 침투 가속.\n브랜드 정체성을 지키는 실행력이 중요해졌다.",
+    "emphasis": "창의성 증폭 vs 정체성 희석"
   },
   {
-    "slide": 6,
-    "type": "content-list",
-    "headline": "2025 상위권 리스트 더 보기",
-    "item1": "Espresso - Sabrina Carpenter",
-    "item2": "Good Luck, Babe! - Chappell Roan",
-    "item3": "A Bar Song (Tipsy) - Shaboozey",
-    "item4": "All I Want for Christmas Is You - Mariah Carey",
-    "item5": "The Fate of Ophelia - Taylor Swift"
+    "type": "content",
+    "headline": "10조 펫코노미, 펫프렌즈 첫 흑자",
+    "body": "성장 시장이 수익화 국면으로 이동 중.\n반복구매·구독 모델이 수익의 핵심 축.",
+    "emphasis": "이제는 흑자 체력"
   },
   {
-    "slide": 7,
+    "type": "content",
+    "headline": "탕후루 6개월·두쫀쿠 3개월",
+    "body": "MZ 입맛의 반감기가 더 짧아졌다.\n히트보다 회전율·출시 속도가 경쟁력.",
+    "emphasis": "초고속 트렌드 시대"
+  },
+  {
+    "type": "content",
+    "headline": "두끼 대만, 혐한 마케팅 논란",
+    "body": "글로벌 확장에선 문화 감수성이 생존 조건.\n사과문보다 재발 방지 프로세스가 중요.",
+    "emphasis": "브랜드 신뢰 회복전"
+  },
+  {
+    "type": "content",
+    "headline": "IPO 앞둔 무신사, 강경 대응",
+    "body": "택갈이·허위 혼용률 이슈 정면 대응.\n상장 전 핵심은 성장보다 거버넌스 신뢰.",
+    "emphasis": "밸류는 신뢰에서"
+  },
+  {
+    "type": "content",
+    "headline": "구글 검색+제미나이, 광고 40% 감소",
+    "body": "답변형 검색이 클릭을 줄이는 흐름.\n광고·SEO 전략 재편이 불가피하다.",
+    "emphasis": "검색 광고 룰 체인지"
+  },
+  {
     "type": "cta",
-    "headline": "당신의 플레이리스트 최애곡은?",
-    "cta_text": "자세히 보기 →"
+    "headline": "토스 페이스페이, 삼성페이를 넘어설까?",
+    "body": "결론: 부분 승리는 가능, 전체 역전은 장기전.\n승부처는 가맹점 확산·보안 신뢰·혜택 설계.",
+    "cta_text": "너의 선택은? 삼성페이 vs 페이스페이"
   }
 ]
